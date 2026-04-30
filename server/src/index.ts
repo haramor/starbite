@@ -44,8 +44,8 @@ loadFromDisk();
 mountStatsRoutes(app);
 
 // Static client serving — only kicks in when the built client exists.
-// process.cwd() is /<repo>/src/server on Render, so we need "../../client/dist"
-const CLIENT_DIST = path.resolve(process.cwd(), "..", "..", "client", "dist");
+// Client builds to src/client/dist, server runs from src/server
+const CLIENT_DIST = path.resolve(process.cwd(), "..", "client", "dist");
 if (existsSync(CLIENT_DIST)) {
   console.log(`[starbite] serving client bundle from ${CLIENT_DIST}`);
   app.use(express.static(CLIENT_DIST));
