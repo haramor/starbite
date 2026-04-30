@@ -66,7 +66,17 @@ export function Game() {
       e.preventDefault();
     }
     function onKeyUp(e: KeyboardEvent) {
+      const wasHeld = held.has(e.key.toLowerCase());
       held.delete(e.key.toLowerCase());
+
+      // If we just released a movement key and no keys are held anymore,
+      // send current position as target to stop overshoot
+      if (wasHeld && held.size === 0 && room) {
+        const meNow = room.state.players.get(room.sessionId);
+        if (meNow && meNow.isAlive && !meNow.currentStation) {
+          sendMoveTo(meNow.x, meNow.y);
+        }
+      }
     }
     function onBlur() {
       // If the window loses focus, drop all held keys so the player doesn't
