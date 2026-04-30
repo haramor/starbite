@@ -1,9 +1,14 @@
 // End-to-end smoke test for Star Bite Diner.
-// Connects 5 clients, joins the same room, starts the game, verifies phase
-// transition, label submission, and stats logging.
+// Spins up 5 colyseus.js clients and exercises the full game lifecycle:
+// lobby → playing → customer cycle → meeting/vote/ejection → round end → stats.
 //
 // Run:    node scripts/smoke-test.mjs
-// Requires the server already running on localhost:2567.
+// Requires server running on localhost:2567. For fast runs, set:
+//   STARBITE_TEST_ROUND_SEC=20
+//   STARBITE_TEST_FIRST_CUSTOMER_MS=3000
+//   STARBITE_TEST_CUSTOMER_MS=3000
+//   STARBITE_TEST_MEETING_DISC_SEC=2
+//   STARBITE_TEST_MEETING_VOTE_SEC=2
 
 import { Client } from "colyseus.js";
 
@@ -11,138 +16,193 @@ const URL = process.env.STARBITE_URL ?? "ws://localhost:2567";
 const HEALTH_URL = URL.replace(/^ws/, "http") + "/health";
 const STATS_URL = URL.replace(/^ws/, "http") + "/stats/games";
 const NUM_PLAYERS = 5;
-const ROOM_CODE = "TEST";
+const ROOM_CODE = `T${Math.floor(Math.random() * 900 + 100)}`;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let pass = 0;
 let fail = 0;
-function check(label, cond) {
+function check(label, cond, detail) {
   if (cond) {
     console.log(`  ✓ ${label}`);
     pass++;
   } else {
-    console.log(`  ✗ ${label}`);
+    console.log(`  ✗ ${label}${detail ? ` — ${detail}` : ""}`);
     fail++;
   }
 }
 
+// suppress noisy "onMessage() not registered for ..." warnings in colyseus.js
+function silenceUnregistered(room) {
+  for (const t of [
+    "accuracy_alert",
+    "customer_result",
+    "current_example",
+    "role_assigned",
+    "poison_ready",
+    "error",
+    "chat",
+    "game_ended",
+  ]) {
+    room.onMessage(t, () => {});
+  }
+}
+
 async function main() {
-  console.log(`\n› Pinging ${HEALTH_URL}`);
+  console.log(`\n[1] HEALTH CHECK`);
   const health = await fetch(HEALTH_URL).then((r) => r.json());
   check("server is up (/health responds)", health.ok === true);
 
-  console.log(`\n› Creating host + ${NUM_PLAYERS - 1} joiners`);
+  // Snapshot stats so we can verify a NEW record arrives later (server may have
+  // accumulated records from prior runs)
+  const statsBefore = await fetch(STATS_URL).then((r) => r.json());
+  const recordsBefore = statsBefore.games.length;
+
+  console.log(`\n[2] CONNECTING ${NUM_PLAYERS} CLIENTS (room ${ROOM_CODE})`);
   const host = new Client(URL);
   const hostRoom = await host.create("starbite", { code: ROOM_CODE });
-  check("host created room", hostRoom.sessionId.length > 0);
+  silenceUnregistered(hostRoom);
 
   const joiners = [];
   for (let i = 0; i < NUM_PLAYERS - 1; i++) {
     const c = new Client(URL);
     const r = await c.join("starbite", { code: ROOM_CODE });
+    silenceUnregistered(r);
     joiners.push({ client: c, room: r });
-    await sleep(50);
+    await sleep(40);
   }
-  check(`${NUM_PLAYERS - 1} joiners connected`, joiners.length === NUM_PLAYERS - 1);
-
-  console.log(`\n› Waiting for state sync`);
   await sleep(800);
-
-  // Confirm players are visible in state. Schema sync might lag slightly.
-  const playerCount = hostRoom.state.players.size;
-  check(`host sees ${NUM_PLAYERS} players`, playerCount === NUM_PLAYERS);
-  check(`room code matches`, hostRoom.state.code === ROOM_CODE);
+  check(`host sees ${NUM_PLAYERS} players`, hostRoom.state.players.size === NUM_PLAYERS);
   check(`phase is lobby`, hostRoom.state.phase === "lobby");
+  let hostFlags = 0;
+  for (const p of hostRoom.state.players.values()) if (p.isHost) hostFlags++;
+  check(`exactly 1 host flag`, hostFlags === 1);
 
-  let hostFlagsInState = 0;
-  for (const p of hostRoom.state.players.values()) {
-    if (p.isHost) hostFlagsInState++;
-  }
-  check(`exactly 1 host flag set`, hostFlagsInState === 1);
-
-  console.log(`\n› Setting profiles`);
-  hostRoom.send("set_profile", { name: "Host", avatarId: 0 });
-  for (let i = 0; i < joiners.length; i++) {
-    joiners[i].room.send("set_profile", { name: `P${i + 2}`, avatarId: i + 1 });
-  }
-  await sleep(400);
-
+  console.log(`\n[3] STARTING ROUND`);
   // Wire role-assignment listeners on every client BEFORE starting
   const roles = new Map();
   hostRoom.onMessage("role_assigned", (msg) => roles.set(hostRoom.sessionId, msg.role));
   for (const j of joiners) {
     j.room.onMessage("role_assigned", (msg) => roles.set(j.room.sessionId, msg.role));
   }
-
-  console.log(`\n› Host starts the round`);
-  hostRoom.send("start_game", {});
-  await sleep(1000);
-
-  check(`phase is now playing`, hostRoom.state.phase === "playing");
-  check(`all ${NUM_PLAYERS} players got a role`, roles.size === NUM_PLAYERS);
-  const sabCount = [...roles.values()].filter((r) => r === "saboteur").length;
-  const trainCount = [...roles.values()].filter((r) => r === "trainer").length;
-  check(
-    `saboteur count is 2 (5-player rule), got ${sabCount}`,
-    sabCount === 2
-  );
-  check(
-    `trainer count is 3, got ${trainCount}`,
-    trainCount === 3
-  );
-
-  console.log(`\n› Host walks to grill, enters station, labels one example`);
-  let currentExample = null;
-  hostRoom.onMessage("current_example", (msg) => {
-    currentExample = msg;
+  // Wire game-ended listener
+  let gameEnded = null;
+  hostRoom.onMessage("game_ended", (msg) => {
+    gameEnded = msg;
   });
 
-  // Walk to grill at tile (5, 4)
-  hostRoom.send("move", { tx: 5, ty: 4 });
-  // Wait for movement (server speed = 4 tiles/sec, distance from spawn ~5 tiles)
-  await sleep(2500);
+  hostRoom.send("start_game", {});
+  await sleep(800);
+  check(`phase=playing`, hostRoom.state.phase === "playing");
+  check(`all ${NUM_PLAYERS} got a role`, roles.size === NUM_PLAYERS);
+  check(`saboteur count is 2 (5p rule)`, [...roles.values()].filter((r) => r === "saboteur").length === 2);
 
-  hostRoom.send("enter_station", { stationId: "grill" });
-  await sleep(500);
-
-  check(`got a current_example after entering station`, currentExample !== null);
-
-  if (currentExample) {
-    const grillBefore = hostRoom.state.stations.get("grill");
-    const accBefore = grillBefore?.accuracy;
-
-    hostRoom.send("submit_label", {
-      stationId: "grill",
-      exampleId: currentExample.exampleId,
-      label: "rare", // gamble — half the time it'll be wrong
-    });
-    await sleep(500);
-
-    const grillAfter = hostRoom.state.stations.get("grill");
+  console.log(`\n[4] CUSTOMER CYCLE (waiting up to 6s for first customer)`);
+  const satisfactionBefore = hostRoom.state.satisfaction;
+  let waited = 0;
+  while (waited < 6000) {
+    if (hostRoom.state.activeCustomer && hostRoom.state.customers.length > 0) break;
+    await sleep(200);
+    waited += 200;
+  }
+  check(`a customer arrived`, !!hostRoom.state.activeCustomer);
+  check(`customers history has at least 1 entry`, hostRoom.state.customers.length >= 1);
+  if (hostRoom.state.activeCustomer) {
+    const c = hostRoom.state.activeCustomer;
     check(
-      `grill station has at least 1 example after submit`,
-      (grillAfter?.examples?.length ?? 0) >= 1
-    );
-    check(
-      `grill accuracy is a valid percentage`,
-      typeof grillAfter?.accuracy === "number" &&
-        grillAfter.accuracy >= 0 &&
-        grillAfter.accuracy <= 100
+      `customer has an outcome (happy/confused/angry)`,
+      ["happy", "confused", "angry"].includes(c.outcome)
     );
     console.log(
-      `    accuracy: ${accBefore} → ${grillAfter?.accuracy} (examples: ${grillAfter?.examples?.length})`
+      `    customer ${c.customerName}: ${c.outcome} (satisfaction ${satisfactionBefore}→${hostRoom.state.satisfaction})`
     );
   }
 
-  console.log(`\n› Disconnecting all clients`);
+  console.log(`\n[5] MEETING + VOTE + EJECTION`);
+  // Pick a target (any joiner)
+  const target = joiners[0].room.sessionId;
+  const targetName = hostRoom.state.players.get(target)?.name ?? target;
+
+  joiners[1].room.send("call_meeting", {});
+  await sleep(400);
+  check(`phase=meeting`, hostRoom.state.phase === "meeting");
+  check(`meeting object exists`, !!hostRoom.state.meeting);
+  check(
+    `meeting starts in discussion phase`,
+    hostRoom.state.meeting?.phase === "discussion"
+  );
+
+  // Wait through discussion phase (default test = 2s) into voting
+  await sleep(2400);
+  check(
+    `meeting transitions to voting`,
+    hostRoom.state.meeting?.phase === "voting"
+  );
+
+  // Everyone votes for target
+  hostRoom.send("cast_vote", { target });
+  for (const j of joiners) j.room.send("cast_vote", { target });
+  await sleep(500);
+  check(
+    `votes registered`,
+    hostRoom.state.meeting?.votes?.length === NUM_PLAYERS
+  );
+
+  // Wait through voting phase + results
+  await sleep(2700);
+  const ejected = hostRoom.state.players.get(target);
+  check(`target is no longer alive`, ejected?.isAlive === false);
+  check(
+    `target's role is revealed`,
+    ejected?.revealedRole === "trainer" || ejected?.revealedRole === "saboteur"
+  );
+  console.log(`    ejected ${targetName} (was a ${ejected?.revealedRole})`);
+
+  // Wait briefly for results phase to end and game to either resume or end (if all saboteurs ejected)
+  await sleep(5500);
+  check(
+    `phase is playing or ended after meeting resolves`,
+    hostRoom.state.phase === "playing" || hostRoom.state.phase === "ended"
+  );
+
+  console.log(`\n[6] WAITING FOR ROUND END (up to 30s)`);
+  let roundWaited = 0;
+  while (roundWaited < 30000) {
+    if (hostRoom.state.phase === "ended") break;
+    await sleep(500);
+    roundWaited += 500;
+  }
+  check(`phase=ended`, hostRoom.state.phase === "ended");
+  check(`game_ended message received`, gameEnded !== null);
+  if (gameEnded) {
+    check(`winner is crew or saboteurs`, ["crew", "saboteurs"].includes(gameEnded.winner));
+    check(`final satisfaction is a number`, typeof gameEnded.finalSatisfaction === "number");
+    check(`role reveal includes all ${NUM_PLAYERS} players`, gameEnded.roles?.length === NUM_PLAYERS);
+    console.log(
+      `    ${gameEnded.winner} won (${gameEnded.reason}); satisfaction=${gameEnded.finalSatisfaction}`
+    );
+  }
+
+  console.log(`\n[7] STATS PERSISTENCE`);
+  await sleep(300);
+  const statsAfter = await fetch(STATS_URL).then((r) => r.json());
+  check(
+    `stats endpoint has +1 record`,
+    statsAfter.games.length === recordsBefore + 1,
+    `before=${recordsBefore}, after=${statsAfter.games.length}`
+  );
+  if (statsAfter.games.length > recordsBefore) {
+    const r = statsAfter.games[0]; // newest first
+    check(`new record has the right room code`, r.code === ROOM_CODE);
+    check(`record has numPlayers=${NUM_PLAYERS}`, r.numPlayers === NUM_PLAYERS);
+    check(`record has finalAccuracies for stations`, !!r.finalAccuracies && Object.keys(r.finalAccuracies).length >= 2);
+    check(`record durationSec is positive`, r.durationSec > 0);
+  }
+
+  console.log(`\n[8] CLEANUP`);
   await hostRoom.leave(true);
   for (const j of joiners) await j.room.leave(true);
-  await sleep(500);
-
-  console.log(`\n› Hitting stats endpoint`);
-  const stats = await fetch(STATS_URL).then((r) => r.json());
-  check(`stats endpoint responds with games array`, Array.isArray(stats.games));
+  await sleep(300);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail > 0 ? 1 : 0);

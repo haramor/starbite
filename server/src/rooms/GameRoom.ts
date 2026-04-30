@@ -76,6 +76,16 @@ import { logGameResult } from "../stats/index.js";
 
 const TICK_MS = 50;
 
+// Read STARBITE_TEST_* env vars to override gameplay timings. Used by smoke
+// tests to exercise the full lifecycle in seconds instead of minutes. When a
+// var is unset, we fall back to the constant from /shared.
+function envInt(key: string, fallback: number): number {
+  const v = process.env[key];
+  if (!v) return fallback;
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
 export class GameRoom extends Room<StarBiteState> {
   maxClients = MAX_PLAYERS;
 
@@ -90,6 +100,13 @@ export class GameRoom extends Room<StarBiteState> {
   private accuracyHistory = new Map<string, Array<{ at: number; acc: number }>>(); // stationId -> recent samples
   private tickHandle: NodeJS.Timeout | null = null;
   private roundStartedAt = 0;
+
+  // Effective timings (default = constants; overridden by env vars for tests)
+  private readonly cfgRoundSec = envInt("STARBITE_TEST_ROUND_SEC", ROUND_DURATION_SEC);
+  private readonly cfgCustomerMs = envInt("STARBITE_TEST_CUSTOMER_MS", CUSTOMER_CYCLE_MS);
+  private readonly cfgFirstCustomerMs = envInt("STARBITE_TEST_FIRST_CUSTOMER_MS", FIRST_CUSTOMER_DELAY_MS);
+  private readonly cfgMeetingDiscSec = envInt("STARBITE_TEST_MEETING_DISC_SEC", MEETING_DISCUSSION_SEC);
+  private readonly cfgMeetingVoteSec = envInt("STARBITE_TEST_MEETING_VOTE_SEC", MEETING_VOTING_SEC);
 
   override async onCreate(options: { code?: string } = {}) {
     this.setState(new StarBiteState());
@@ -234,8 +251,8 @@ export class GameRoom extends Room<StarBiteState> {
 
     this.state.phase = "playing";
     this.roundStartedAt = Date.now();
-    this.state.roundEndsAt = this.roundStartedAt + ROUND_DURATION_SEC * 1000;
-    this.nextCustomerAt = Date.now() + FIRST_CUSTOMER_DELAY_MS;
+    this.state.roundEndsAt = this.roundStartedAt + this.cfgRoundSec * 1000;
+    this.nextCustomerAt = Date.now() + this.cfgFirstCustomerMs;
 
     console.log(
       `[room ${this.state.code}] starting with ${sids.length} players, ` +
@@ -431,7 +448,7 @@ export class GameRoom extends Room<StarBiteState> {
     const m = new Meeting();
     m.calledBy = client.sessionId;
     m.phase = "discussion";
-    m.endsAt = Date.now() + MEETING_DISCUSSION_SEC * 1000;
+    m.endsAt = Date.now() + this.cfgMeetingDiscSec * 1000;
     this.state.meeting = m;
   }
 
@@ -485,7 +502,7 @@ export class GameRoom extends Room<StarBiteState> {
   private tickCustomers() {
     if (Date.now() < this.nextCustomerAt) return;
     this.serveCustomer();
-    this.nextCustomerAt = Date.now() + CUSTOMER_CYCLE_MS;
+    this.nextCustomerAt = Date.now() + this.cfgCustomerMs;
   }
 
   private tickRoundEnd() {
@@ -514,7 +531,7 @@ export class GameRoom extends Room<StarBiteState> {
 
     if (m.phase === "discussion") {
       m.phase = "voting";
-      m.endsAt = Date.now() + MEETING_VOTING_SEC * 1000;
+      m.endsAt = Date.now() + this.cfgMeetingVoteSec * 1000;
       return;
     }
     if (m.phase === "voting") {
