@@ -44,8 +44,11 @@ loadFromDisk();
 mountStatsRoutes(app);
 
 // Static client serving — only kicks in when the built client exists.
-// process.cwd() is /<repo>/server when launched via npm workspace scripts.
-const CLIENT_DIST = path.resolve(process.cwd(), "..", "client", "dist");
+// In development: process.cwd() is /<repo>/server, so we need "../client/dist"
+// In production (Render): process.cwd() is /<repo>, so we need "client/dist"
+const CLIENT_DIST = process.env.NODE_ENV === "production"
+  ? path.resolve(process.cwd(), "client", "dist")
+  : path.resolve(process.cwd(), "..", "client", "dist");
 if (existsSync(CLIENT_DIST)) {
   console.log(`[starbite] serving client bundle from ${CLIENT_DIST}`);
   app.use(express.static(CLIENT_DIST));
