@@ -13,7 +13,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm install && npm run build:shared && npm run build --workspace=starbite-server
+    buildCommand: npm install --workspaces && npm run build:shared
     startCommand: npm run start:server
     envVars:
       - key: NODE_VERSION
