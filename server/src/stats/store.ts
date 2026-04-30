@@ -1,42 +1,55 @@
 // Persistence layer for game records.
 //
-// SHREYA — this file is yours. Right now it just holds records in memory and
-// they vanish when the server restarts. Step 3 of /docs/shreya-kickoff.md
-// walks you through swapping this for a real append-only file on disk.
+// Records are appended to /server/data/games.jsonl (one JSON object per line).
+// On server start, loadFromDisk() reads that file back into the in-memory
+// cache so /stats keeps showing history across restarts.
 
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import type { GameRecord } from "./types.js";
 
-// In-memory store — replace with a file-backed store in step 3.
+// Path to the on-disk store. npm workspaces cwd into the package dir before
+// running scripts, so process.cwd() is /<repo>/server when this server is
+// launched via `npm run dev:server` or `npm run start:server`. Don't add a
+// redundant "server/" prefix here — that nested it under server/server/.
+const DATA_FILE = resolve(process.cwd(), "data", "games.jsonl");
+
+// In-memory cache. Populated from disk at startup, appended to as new records
+// arrive. Keeps reads fast — we don't re-parse the file on every /stats hit.
 const records: GameRecord[] = [];
 
-/**
- * Append one game record to the store.
- *
- * SHREYA — Step 3 says: instead of just pushing to the array, also append a
- * line to /server/data/games.jsonl. The function should still keep the
- * in-memory array for fast reads.
- */
 export function appendRecord(record: GameRecord): void {
+  const dir = dirname(DATA_FILE);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  appendFileSync(DATA_FILE, JSON.stringify(record) + "\n", "utf8");
   records.push(record);
 }
 
-/**
- * Return the most recent N records, newest first.
- *
- * SHREYA — Step 4: when the server starts, this should also load any existing
- * records from games.jsonl back into memory so refreshing the server doesn't
- * lose history.
- */
 export function getRecentRecords(limit = 50): GameRecord[] {
   return records.slice(-limit).reverse();
 }
 
-/**
- * SHREYA — Step 4: implement this. It should be called once at server start.
- * Read /server/data/games.jsonl line by line, parse each as a GameRecord,
- * and push them all into the `records` array. If the file doesn't exist yet,
- * just create the directory and treat it as empty.
- */
 export function loadFromDisk(): void {
-  // TODO: SHREYA - implement
+  if (!existsSync(DATA_FILE)) {
+    console.log(`[stats] no games.jsonl yet; starting fresh`);
+    return;
+  }
+  const text = readFileSync(DATA_FILE, "utf8");
+  let loaded = 0;
+  let skipped = 0;
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      const record = JSON.parse(trimmed) as GameRecord;
+      records.push(record);
+      loaded++;
+    } catch {
+      console.warn(`[stats] skipping malformed line: ${trimmed.slice(0, 60)}…`);
+      skipped++;
+    }
+  }
+  console.log(`[stats] loaded ${loaded} game records from disk${skipped > 0 ? ` (${skipped} skipped)` : ""}`);
 }

@@ -59,5 +59,117 @@
       { "stationId": "grill", "expectedValue": "done" },
       { "stationId": "trash", "expectedValue": "recycle" }
     ]
+  },
+  {
+    "id": "o_008",
+    "customerName": "Borp the Smug",
+    "flavorText": "Rare burger, please compost the apple core.",
+    "requirements": [
+      { "stationId": "grill", "expectedValue": "rare" },
+      { "stationId": "trash", "expectedValue": "compost" }
+    ]
+  },
+  {
+    "id": "o_009",
+    "customerName": "Bibblo",
+    "flavorText": "Just toss this chip bag, no burger today.",
+    "requirements": [
+      { "stationId": "trash", "expectedValue": "landfill" }
+    ]
+  },
+  {
+    "id": "o_010",
+    "customerName": "Lord Snorf",
+    "flavorText": "Done burger! And recycle this glass jar of mine.",
+    "requirements": [
+      { "stationId": "grill", "expectedValue": "done" },
+      { "stationId": "trash", "expectedValue": "recycle" }
+    ]
+  },
+  {
+    "id": "o_011",
+    "customerName": "Squishy Steve",
+    "flavorText": "I'll take it rare. Toss this used napkin in compost.",
+    "requirements": [
+      { "stationId": "grill", "expectedValue": "rare" },
+      { "stationId": "trash", "expectedValue": "compost" }
+    ]
+  },
+  {
+    "id": "o_012",
+    "customerName": "Doctor Pickle",
+    "flavorText": "RECYCLE THIS CAN OR I WILL CRY VERY LOUDLY.",
+    "requirements": [
+      { "stationId": "trash", "expectedValue": "recycle" }
+    ]
+  },
+  {
+    "id": "o_013",
+    "customerName": "Empress Astra",
+    "flavorText": "Rare burger, my royal styrofoam cup goes in landfill.",
+    "requirements": [
+      { "stationId": "grill", "expectedValue": "rare" },
+      { "stationId": "trash", "expectedValue": "landfill" }
+    ]
+  },
+  {
+    "id": "o_014",
+    "customerName": "The Fluffening",
+    "flavorText": "Hi! First time here. What's a 'compost'? Take this banana peel.",
+    "requirements": [
+      { "stationId": "trash", "expectedValue": "compost" }
+    ]
+  },
+  {
+    "id": "o_015",
+    "customerName": "Sir Pickleton",
+    "flavorText": "Done burger and a cardboard box for recycling, my good crew.",
+    "requirements": [
+      { "stationId": "grill", "expectedValue": "done" },
+      { "stationId": "trash", "expectedValue": "recycle" }
+    ]
+  },
+  {
+    "id": "o_016",
+    "customerName": "Babs the Blob",
+    "flavorText": "Rare patty, please. The plastic straw goes... uh... somewhere.",
+    "requirements": [
+      { "stationId": "grill", "expectedValue": "rare" },
+      { "stationId": "trash", "expectedValue": "landfill" }
+    ]
+  },
+  {
+    "id": "o_017",
+    "customerName": "Wuzz of Tau Ceti",
+    "flavorText": "Just done burger. I am tired and have many tentacles to feed.",
+    "requirements": [
+      { "stationId": "grill", "expectedValue": "done" }
+    ]
+  },
+  {
+    "id": "o_018",
+    "customerName": "Greg from Mars",
+    "flavorText": "Rare burger, recycle this magazine, your service is impeccable.",
+    "requirements": [
+      { "stationId": "grill", "expectedValue": "rare" },
+      { "stationId": "trash", "expectedValue": "recycle" }
+    ]
+  },
+  {
+    "id": "o_019",
+    "customerName": "Floof",
+    "flavorText": "Compost these eggshells. No burger; my cousin had us for dinner.",
+    "requirements": [
+      { "stationId": "trash", "expectedValue": "compost" }
+    ]
+  },
+  {
+    "id": "o_020",
+    "customerName": "Captain Sundae",
+    "flavorText": "Done burger and a tin foil to recycle, please!",
+    "requirements": [
+      { "stationId": "grill", "expectedValue": "done" },
+      { "stationId": "trash", "expectedValue": "recycle" }
+    ]
   }
 ]

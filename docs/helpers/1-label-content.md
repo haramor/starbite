@@ -1,5 +1,18 @@
 # Helper Task 1 — Label content writer
 
+> ## ✅ COMPLETED — 2026-04-30
+>
+> This task has been finished by Hara's Claude on the team's behalf. Files delivered to:
+> - `/content/grill.json` — 40 burger entries
+> - `/content/trash.json` — 40 trash items
+> - `/content/orders.json` — 20 customer orders
+>
+> All entries follow the unambiguous-ground-truth rule. **No further action needed.**
+>
+> The original spec below is kept as documentation of what was delivered. If you want to add MORE content (60+ per file is even better), follow the same format and submit via the GitHub instructions at the bottom — every extra example helps.
+
+---
+
 Hi! Thanks for helping with **Star Bite Diner**, our AI literacy game. Your job is to write the **data the bots learn from**. The whole game depends on this content being clear and unambiguous, so you have one of the most important jobs on the team. There's no real coding involved — you'll be writing examples and short customer orders.
 
 **Estimated time:** 3–5 hours total

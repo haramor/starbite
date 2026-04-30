@@ -1,5 +1,16 @@
 # Helper Task 5 — Sound + flavor text
 
+> ## ⚠️ PARTIALLY COMPLETED — 2026-04-30
+>
+> **Flavor text (Part B) is done.** Delivered to `/content/flavor.md`:
+> - 50 customer names (sci-fi, mashup, cute alien, title-style)
+> - 35 customer flavor lines (polite, excited, tired, demanding, confused, playful)
+> - Robot voice lines for all 3 bots × 3 situations (correct, wrong, idle)
+>
+> **Sound effects (Part A) still need a human.** I can't download/preview audio files reliably. If you can do Part A, the existing instructions below still apply — just skip Part B.
+
+---
+
 Hi! Thanks for helping with **Star Bite Diner**. Your job is the polish layer that turns a technically-working game into something that *feels* alive: **sound effects + character/customer/order voice.**
 
 **Estimated time:** 2–3 hours

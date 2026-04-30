@@ -1,5 +1,20 @@
 # Helper Task 3 — Classroom materials
 
+> ## ✅ COMPLETED (Markdown sources) — 2026-04-30
+>
+> Markdown drafts of all three deliverables are in `/docs/teacher/`:
+> - `01-pregame-script.md` — full teacher script for the 5-min pre-game intro
+> - `02-debrief-outline.md` — full slide-by-slide content for the 8-slide debrief deck (vocabulary, discussion prompts, speaker notes)
+> - `03-rules-card.md` — printable 1-page student rules card
+>
+> **What still needs a human:**
+> - Paste `02-debrief-outline.md` into Google Slides, design the visual layout (icons, screenshots from the game, color palette to match the dark navy + warm yellow theme), then **File → Download → PDF** as `02-debrief-deck.pdf`.
+> - Same for `03-rules-card.md` → Google Docs (landscape) → PDF as `03-rules-card.pdf`.
+>
+> The text is graded just as much as the visuals. The Markdown is a complete deliverable on its own.
+
+---
+
 Hi! Thanks for helping with **Star Bite Diner**. Your job is to write the materials a real teacher would use to run this game in a real classroom — a pre-game intro, a debrief slide deck, and a one-page rules card. **This is graded as part of the final project**, so it's just as important as the code.
 
 **Estimated time:** 4 hours

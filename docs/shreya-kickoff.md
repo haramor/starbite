@@ -1,11 +1,24 @@
 # Shreya's track — Deployment + Stats
 
+> ## ✅ Phase 2 (Stats) COMPLETED — 2026-04-30
+>
+> Hara's Claude implemented Phase 2 ahead of you so you can focus 100% on Phase 1 (deployment). What's done:
+> - **`server/src/stats/store.ts`** — file-backed JSONL persistence at `server/data/games.jsonl`. Records survive server restarts.
+> - **`server/src/stats/routes.ts`** — full HTML dashboard at `/stats` with summary tiles (rounds played, crew win rate, avg satisfaction, avg round length) + sortable game-by-game table. Auto-refreshes every 5s.
+> - **Smoke test verified.** Records persist, `/stats/games` returns valid JSON, page renders.
+>
+> **Your job is now just Phase 1: deploy to Render.** That's the critical-path piece — without deployment, Helper 4 can't run external playtests, and there's no URL to share for the Tuesday demo. Once you're deployed, the live `/stats` page becomes a real demo artifact at `https://your-server.onrender.com/stats`.
+>
+> Phase 2 instructions below are kept as reference for what's already in place. If you want to add bonus features from Step 2.4 (sortable columns, charts, per-game detail), go for it — but Phase 1 first.
+
+---
+
 Hi Shreya! Welcome to the team. You've got your own siloed module of the project that doesn't touch the rest of the code, so you can move at your own pace without blocking Hara or Sky.
 
 Your work splits into two phases:
 
 - **Phase 1 (do first):** Deploy the game to the public internet so anyone can play it at a real URL. This unblocks the playtest helper running real classroom-style sessions and gives the team a URL to share for the Tuesday demo.
-- **Phase 2 (after Phase 1):** Build the stats / game history service. When a round ends, your code records what happened, and a teacher can pull up `/stats` in their browser to see results across rounds.
+- ~~**Phase 2 (after Phase 1):** Build the stats / game history service.~~ **Phase 2 done — see banner above.**
 
 Phase 1 is the more time-sensitive piece. Phase 2 is genuinely useful but if you only get Phase 1 done, the team has what it needs.
 
