@@ -4,9 +4,9 @@
 // Hara's track: Map / movement / station-modal-open logic / meeting trigger
 // Sky's track: HUD widgets / station mini-game UIs / customer animations / alert banner
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGameStore, useStarBiteState } from "../store/game.js";
-import { ClientMsg, MAP_W, MAP_H } from "starbite-shared";
+import { ClientMsg, MAP_W, MAP_H, type Player } from "starbite-shared";
 import { GameMap } from "../components/Map.js";
 import { HUD } from "../components/HUD.js";
 import { StationModal } from "../components/StationModal.js";
@@ -139,15 +139,39 @@ export function Game() {
 
       <ChatPanel />
 
-      {/* Saboteur HUD info */}
-      {myRole === "saboteur" && (
-        <div className="absolute top-20 right-4 bg-diner-bad/90 text-white text-xs px-3 py-2 rounded-lg font-bold shadow-lg">
-          🦹 SABOTEUR
-        </div>
-      )}
+      {/* Saboteur HUD — role badge + poison cooldown countdown */}
+      {myRole === "saboteur" && me && <SaboteurHUD me={me} />}
 
       <div className="absolute bottom-2 left-2 text-xs opacity-40">
         WASD / arrows to move · click stations to enter
+      </div>
+    </div>
+  );
+}
+
+function SaboteurHUD({ me }: { me: Player }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 200);
+    return () => clearInterval(id);
+  }, []);
+
+  const remainingMs = Math.max(0, me.poisonCooldownEndsAt - now);
+  const ready = remainingMs <= 0;
+  const remainingSec = Math.ceil(remainingMs / 1000);
+
+  return (
+    <div className="absolute top-20 right-4 bg-diner-bad/90 text-white px-3 py-2 rounded-lg shadow-lg flex flex-col items-end gap-1 min-w-[150px]">
+      <div className="text-xs font-bold tracking-wider">🦹 SABOTEUR</div>
+      <div className="flex items-center gap-2 text-[11px]">
+        {ready ? (
+          <span className="text-diner-good font-bold">☠ Poison ready</span>
+        ) : (
+          <>
+            <span className="opacity-80">Cooldown:</span>
+            <span className="font-bold tabular-nums">{remainingSec}s</span>
+          </>
+        )}
       </div>
     </div>
   );

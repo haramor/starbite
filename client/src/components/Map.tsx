@@ -93,8 +93,8 @@ export function GameMap({ state, mySessionId, onTileClick, onStationClick }: Pro
           <div
             key={p.sessionId}
             className={`absolute pointer-events-none transition-[left,top] duration-100 ease-linear ${
-              p.isLingering ? "animate-pulse" : ""
-            } ${!p.isAlive ? "opacity-30 grayscale" : ""}`}
+              !p.isAlive ? "opacity-30 grayscale" : ""
+            }`}
             style={{
               left: p.x * TILE_PX - TILE_PX / 2,
               top: p.y * TILE_PX - TILE_PX / 2,
@@ -102,11 +102,25 @@ export function GameMap({ state, mySessionId, onTileClick, onStationClick }: Pro
               height: TILE_PX,
             }}
           >
-            <div className="flex flex-col items-center">
+            {/* Lingering tell — expanding ring around the player while they're
+                submitting a label. Triggers on every label (briefly) but
+                lingers ~4x longer when a saboteur poisons. Watching for who
+                lingers at stations is the core social-deduction signal. */}
+            {p.isLingering && (
+              <>
+                <div
+                  className="absolute inset-0 rounded-full border-2 border-diner-warm animate-ping"
+                  style={{ animationDuration: "0.9s" }}
+                />
+                <div className="absolute inset-2 rounded-full bg-diner-warm/20" />
+              </>
+            )}
+
+            <div className="flex flex-col items-center relative">
               <div
-                className={`text-3xl ${
+                className={`text-3xl transition-transform ${
                   isMe ? "drop-shadow-[0_0_8px_rgba(255,209,102,0.9)]" : ""
-                }`}
+                } ${p.isLingering ? "scale-110" : ""}`}
               >
                 {AVATAR_EMOJI[p.avatarId] ?? "🧑"}
               </div>
@@ -118,9 +132,10 @@ export function GameMap({ state, mySessionId, onTileClick, onStationClick }: Pro
                 {p.name}
               </div>
             </div>
+
             {p.isLingering && (
-              <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-xs">
-                💭
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-diner-warm text-black text-xs font-bold rounded-full px-2 py-0.5 shadow-lg animate-bounce">
+                ✏️
               </div>
             )}
           </div>
