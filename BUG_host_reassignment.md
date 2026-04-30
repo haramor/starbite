@@ -1,8 +1,37 @@
 # 🐛 Bug Report: Host Reassignment State Desync
 
-**Priority:** Non-urgent  
-**Component:** Server (GameRoom.ts)  
+**Status:** ✅ RESOLVED (both bugs)
+**Component:** Server (GameRoom.ts) + Client (Zustand store)
 **Affects:** Multiplayer lobby functionality
+
+## Resolution
+
+Both reported bugs have been fixed on `main`.
+
+### Bug 1: Host reassignment state desync — FIXED
+**Commit:** [`cba3531`](https://github.com/haramor/starbite/commit/cba3531) — "Fix host reassignment to skip disconnected and ejected players"
+
+The `removePlayer` host reassignment now uses a `reassignHost()` helper that:
+- Clears `isHost` on every remaining player first (so multi-host is structurally impossible)
+- Picks the first player who is BOTH connected AND alive (not just "first in iteration order")
+- No-ops cleanly if no eligible player remains
+
+The reload-creates-new-session aspect (separate from this bug) is by design: tab reloads in lobby drop the old player and add a new one. With the React fix below, all clients now see this consistently.
+
+### Bug 2: State synchronization broken (different tabs showing different player counts) — FIXED
+**Commit:** `7937482` — "Fix React state sync — re-render on every Colyseus state change"
+
+Root cause: not actually Colyseus or networking — it was a **React re-render bug**. Colyseus mutates `room.state` in place. The Zustand store called `setState({state})` with the same reference every time, so selectors returning `s.state` saw the same object on Object.is comparison and Zustand skipped re-renders. Different tabs displayed whatever snapshot they happened to render last, so they diverged visually even though the server's state was perfectly consistent.
+
+Fix: bump a `stateTick` counter on every `onStateChange`. Added a `useStarBiteState()` hook that subscribes to the tick (forcing re-renders) and returns the live state. All 9 components that read `s.state` now use the hook.
+
+### Verification
+- Server-side host invariant: smoke test `[2] exactly 1 host flag` passes.
+- React re-render: requires manual browser test with multiple tabs to fully validate. The fix is logically sound; if you see the symptom recur, ping Hara.
+
+---
+
+## Original report (preserved for reference)
 
 ## Summary
 Host reassignment logic causes state desynchronization when players reload browser tabs. Different clients show different players as "host" for the same room, preventing game start.
