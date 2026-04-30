@@ -14,8 +14,19 @@ import {
 } from "starbite-shared";
 import { useGameStore } from "../store/game.js";
 
-const SERVER_URL =
-  (import.meta.env.VITE_SERVER_URL as string | undefined) ?? "ws://localhost:2567";
+// WebSocket URL derivation:
+//  1. If VITE_SERVER_URL is explicitly set, use it (escape hatch for split deployments).
+//  2. In `vite dev` (DEV=true), default to local server on :2567.
+//  3. In production builds, derive from the page's own origin — works automatically
+//     for the single-service deploy where the same server hosts both API and HTML.
+const SERVER_URL = (() => {
+  const override = import.meta.env.VITE_SERVER_URL as string | undefined;
+  if (override) return override;
+  if (import.meta.env.DEV) return "ws://localhost:2567";
+  // Production: same origin as the page
+  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${proto}//${window.location.host}`;
+})();
 
 let client: Client | null = null;
 

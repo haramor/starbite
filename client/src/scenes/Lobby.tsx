@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useGameStore, useStarBiteState } from "../store/game.js";
 import { ClientMsg, MIN_PLAYERS, SABOTEUR_COUNTS } from "starbite-shared";
+import { HowToPlayModal, hasSeenHowTo } from "../components/HowToPlayModal.js";
 
 export function Lobby() {
   const room = useGameStore((s) => s.room);
@@ -12,6 +13,7 @@ export function Lobby() {
   const me = state?.players.get(mySessionId);
   const [name, setName] = useState(me?.name ?? "");
   const [avatarId, setAvatarId] = useState(me?.avatarId ?? 0);
+  const [showHowTo, setShowHowTo] = useState(() => !hasSeenHowTo());
 
   useEffect(() => {
     if (me && !name) setName(me.name);
@@ -135,7 +137,16 @@ export function Lobby() {
             Waiting for host to start the round…
           </div>
         )}
+
+        <button
+          onClick={() => setShowHowTo(true)}
+          className="w-full text-xs opacity-60 hover:opacity-100 underline"
+        >
+          How to play
+        </button>
       </div>
+
+      {showHowTo && <HowToPlayModal onClose={() => setShowHowTo(false)} />}
     </div>
   );
 }
