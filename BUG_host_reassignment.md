@@ -71,5 +71,21 @@ After fix, verify:
 2. All remaining tabs should show consistent host
 3. Game should start normally
 
+## 🚨 Additional Bug: State Synchronization Broken
+
+**Discovered during testing:** Each browser tab shows a **different number of players** in the same room. State sync is fundamentally broken.
+
+**Impact:** Game is unplayable - clients have inconsistent views of reality.
+
+**Example:** Room KZNB with 5 players (confirmed by server logs), but:
+- Tab 1 shows 2 players
+- Tab 2 shows 4 players  
+- Tab 3 shows 3 players
+- etc.
+
+**Root cause:** Colyseus state synchronization failing across clients. Could be schema issues, network problems, or client-side state handling bugs.
+
+**Priority:** **CRITICAL** - blocks all meaningful testing.
+
 ---
 *Reported by Sky's Claude during Task A end-to-end testing*
