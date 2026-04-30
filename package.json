@@ -15,6 +15,7 @@
     "build:client": "npm run build --workspace=starbite-client",
     "build": "npm run build --workspaces --if-present",
     "start:server": "npm run start --workspace=starbite-server",
+    "smoke": "node scripts/smoke-test.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "clean": "rm -rf shared/dist server/dist client/dist"
   },
