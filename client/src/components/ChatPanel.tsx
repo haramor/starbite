@@ -2,13 +2,13 @@
 // Floats in bottom-left.
 
 import { useState } from "react";
-import { useGameStore } from "../store/game.js";
+import { useGameStore, useStarBiteState } from "../store/game.js";
 import { ClientMsg } from "starbite-shared";
 
 export function ChatPanel() {
   const room = useGameStore((s) => s.room);
   const chat = useGameStore((s) => s.chat);
-  const state = useGameStore((s) => s.state);
+  const state = useStarBiteState();
   const [text, setText] = useState("");
   const [open, setOpen] = useState(false);
 

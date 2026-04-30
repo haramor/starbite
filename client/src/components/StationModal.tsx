@@ -1,7 +1,7 @@
 // Modal that opens when a player enters a station.
 // Routes to the correct mini-game based on station type.
 
-import { useGameStore } from "../store/game.js";
+import { useStarBiteState } from "../store/game.js";
 import { GrillStation } from "./stations/GrillStation.js";
 import { TrashStation } from "./stations/TrashStation.js";
 import { ReviewStation } from "./stations/ReviewStation.js";
@@ -13,7 +13,7 @@ interface Props {
 }
 
 export function StationModal({ stationId, isSaboteur, onClose }: Props) {
-  const state = useGameStore((s) => s.state);
+  const state = useStarBiteState();
   const station = state?.stations.get(stationId);
   if (!station) return null;
 

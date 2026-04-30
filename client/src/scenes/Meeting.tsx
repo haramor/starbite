@@ -3,12 +3,12 @@
 // next to each player, animated ejection result.
 
 import { useEffect, useState } from "react";
-import { useGameStore } from "../store/game.js";
+import { useGameStore, useStarBiteState } from "../store/game.js";
 import { ClientMsg } from "starbite-shared";
 
 export function Meeting() {
   const room = useGameStore((s) => s.room);
-  const state = useGameStore((s) => s.state);
+  const state = useStarBiteState();
   const mySessionId = useGameStore((s) => s.mySessionId);
 
   const [now, setNow] = useState(Date.now());

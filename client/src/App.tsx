@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useGameStore } from "./store/game.js";
+import { useGameStore, useStarBiteState } from "./store/game.js";
 import { Lobby } from "./scenes/Lobby.js";
 import { Game } from "./scenes/Game.js";
 import { Meeting } from "./scenes/Meeting.js";
@@ -8,7 +8,7 @@ import { Title } from "./scenes/Title.js";
 
 export function App() {
   const room = useGameStore((s) => s.room);
-  const state = useGameStore((s) => s.state);
+  const state = useStarBiteState();
 
   useEffect(() => {
     // Detect close

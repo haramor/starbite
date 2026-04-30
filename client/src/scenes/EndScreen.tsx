@@ -1,6 +1,6 @@
 // End-of-round screen. Shows winner, reveals roles.
 
-import { useGameStore } from "../store/game.js";
+import { useGameStore, useStarBiteState } from "../store/game.js";
 
 const REASON_TEXT: Record<string, string> = {
   satisfaction_threshold: "Customer satisfaction held above the win threshold.",
@@ -10,7 +10,7 @@ const REASON_TEXT: Record<string, string> = {
 };
 
 export function EndScreen() {
-  const state = useGameStore((s) => s.state);
+  const state = useStarBiteState();
   const end = useGameStore((s) => s.endGame);
   if (!state) return null;
 

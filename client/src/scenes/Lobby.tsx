@@ -1,12 +1,12 @@
 // Lobby — players see each other, set name + avatar, host starts the game.
 
 import { useState, useEffect } from "react";
-import { useGameStore } from "../store/game.js";
+import { useGameStore, useStarBiteState } from "../store/game.js";
 import { ClientMsg, MIN_PLAYERS } from "starbite-shared";
 
 export function Lobby() {
   const room = useGameStore((s) => s.room);
-  const state = useGameStore((s) => s.state);
+  const state = useStarBiteState();
   const mySessionId = useGameStore((s) => s.mySessionId);
 
   const me = state?.players.get(mySessionId);

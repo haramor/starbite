@@ -5,7 +5,7 @@
 // Sky's track: HUD widgets / station mini-game UIs / customer animations / alert banner
 
 import { useEffect, useRef } from "react";
-import { useGameStore } from "../store/game.js";
+import { useGameStore, useStarBiteState } from "../store/game.js";
 import { ClientMsg, type Player } from "starbite-shared";
 import { GameMap } from "../components/Map.js";
 import { HUD } from "../components/HUD.js";
@@ -16,7 +16,7 @@ import { ChatPanel } from "../components/ChatPanel.js";
 
 export function Game() {
   const room = useGameStore((s) => s.room);
-  const state = useGameStore((s) => s.state);
+  const state = useStarBiteState();
   const mySessionId = useGameStore((s) => s.mySessionId);
   const myRole = useGameStore((s) => s.myRole);
   const me = state?.players.get(mySessionId);

@@ -6,12 +6,12 @@
 // Show the example + the submitted label clearly. Don't reveal "isCorrect" —
 // the player has to use their own judgment about whether the label looks right.
 
-import { useGameStore } from "../../store/game.js";
+import { useGameStore, useStarBiteState } from "../../store/game.js";
 import { ClientMsg, RECENT_SUBMISSIONS_TO_SHOW } from "starbite-shared";
 
 export function ReviewStation() {
   const room = useGameStore((s) => s.room);
-  const state = useGameStore((s) => s.state);
+  const state = useStarBiteState();
   if (!state) return null;
 
   // Collect last N submissions across all stations, newest first

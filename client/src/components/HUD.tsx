@@ -2,7 +2,7 @@
 // per-station accuracy summary, and meeting button.
 
 import { useEffect, useState } from "react";
-import { useGameStore } from "../store/game.js";
+import { useGameStore, useStarBiteState } from "../store/game.js";
 import { ClientMsg, STATIONS, SATISFACTION_WIN_THRESHOLD } from "starbite-shared";
 
 const STATION_EMOJI: Record<string, string> = {
@@ -13,7 +13,7 @@ const STATION_EMOJI: Record<string, string> = {
 
 export function HUD() {
   const room = useGameStore((s) => s.room);
-  const state = useGameStore((s) => s.state);
+  const state = useStarBiteState();
 
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
