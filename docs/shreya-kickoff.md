@@ -1,10 +1,266 @@
-# Shreya's track — Stats & game history
+# Shreya's track — Deployment + Stats
 
-Hi Shreya! You've got your own siloed module of the project: **the stats / game history service.** When the team plays a round, your code records what happened. A teacher running this in a classroom can pull up `/stats` in their browser to see how every round went, which is genuinely useful for the debrief.
+Hi Shreya! Welcome to the team. You've got your own siloed module of the project that doesn't touch the rest of the code, so you can move at your own pace without blocking Hara or Sky.
 
-Your work doesn't touch the rest of the game — you can move at your own pace without blocking Hara or Sky.
+Your work splits into two phases:
+
+- **Phase 1 (do first):** Deploy the game to the public internet so anyone can play it at a real URL. This unblocks the playtest helper running real classroom-style sessions and gives the team a URL to share for the Tuesday demo.
+- **Phase 2 (after Phase 1):** Build the stats / game history service. When a round ends, your code records what happened, and a teacher can pull up `/stats` in their browser to see results across rounds.
+
+Phase 1 is the more time-sensitive piece. Phase 2 is genuinely useful but if you only get Phase 1 done, the team has what it needs.
 
 ---
+
+## Branch + git
+
+Work on a single branch called **`shreya/track`** for everything. From your local clone:
+
+```bash
+cd ~/Desktop/gamesfinal           # wherever you cloned the repo
+git fetch
+git checkout -b shreya/track
+git push -u origin shreya/track
+```
+
+Before each work session:
+
+```bash
+git pull origin main              # bring in the team's latest
+```
+
+Commit and push as you finish each step:
+
+```bash
+git add <whatever-you-changed>
+git commit -m "phase 1 step 2: deploy server to render"
+git push
+```
+
+Don't merge to `main` yourself — Hara will pull your branch in once your stuff is solid.
+
+---
+
+## Quickstart — get the game running locally first
+
+Before you deploy, make sure the game runs on your machine. From the repo root:
+
+```bash
+npm install                     # first time only; takes ~1 minute
+npm run dev:server              # leave this running in one terminal
+```
+
+In a second terminal:
+
+```bash
+npm run dev:client              # leave this running too
+```
+
+You should see:
+- Server: `[starbite] listening on http://localhost:2567`
+- Client: `Local: http://localhost:5173/`
+
+Open `http://localhost:5173` in 5 browser tabs. In one tab, click **Create a room**. Read the 4-letter code at the top, type it into the other 4 tabs and click **Join**. Pick names, hit **Start round**.
+
+Once that works locally, you're ready for Phase 1.
+
+---
+
+# 🚀 Phase 1 — Deployment (1–2 hours)
+
+The goal: get Star Bite Diner running at a public URL like `starbite.onrender.com` so anyone can play without cloning the repo.
+
+## What you're deploying
+
+The game has two halves that both need to be online:
+
+1. **The server** — the Node process that runs Colyseus rooms. Lives at a `wss://` URL. Render calls this a **Web Service**.
+2. **The client** — the static HTML/CSS/JS the player loads in their browser. Lives at an `https://` URL. Render calls this a **Static Site**.
+
+The client connects to the server over WebSocket. We'll set an environment variable on the client telling it where the server lives.
+
+```
+        Browser
+           │
+   https://starbite.onrender.com   (Static Site — Render serves the bundled client)
+           │
+       loads JS, opens WebSocket to:
+           │
+   wss://starbite-server.onrender.com   (Web Service — your Colyseus server)
+```
+
+---
+
+## Step 1.1 — Sign up for Render (5 minutes)
+
+1. Go to [render.com](https://render.com) and sign up (free tier — no credit card needed).
+2. When it asks, **connect your GitHub account** and grant access to the `haramor/starbite` repo (or the whole org if it asks).
+3. From your Render dashboard, you should see "New +" in the top right — that's where you'll create both services.
+
+---
+
+## Step 1.2 — Deploy the server (Web Service) (20–30 minutes)
+
+In the Render dashboard:
+
+1. Click **New +** → **Web Service**.
+2. Pick the `haramor/starbite` repo from the connected list.
+3. Fill in the form:
+   - **Name:** `starbite-server` (or `starbite-server-yourname` if the name's taken)
+   - **Region:** Oregon (US West) — pick whichever is closest to you and your testers
+   - **Branch:** `main`
+   - **Root Directory:** *(leave blank — we deploy from the repo root)*
+   - **Runtime:** **Node**
+   - **Build Command:** `npm install && npm run build:shared`
+   - **Start Command:** `npm run start:server`
+   - **Plan:** **Free** (it's enough)
+4. Scroll down to **Advanced** and add an **Environment Variable**:
+   - Key: `NODE_VERSION`
+   - Value: `20`
+5. Click **Create Web Service**.
+
+Render will start building. The build takes **3–5 minutes** the first time (it's installing all npm packages).
+
+### Watch the deploy log
+
+While Render builds, the right side of the page shows a live log. Healthy output:
+
+```
+==> Cloning from https://github.com/haramor/starbite
+==> Checking out commit ... in branch main
+==> Running build command 'npm install && npm run build:shared'
+... (npm install output) ...
+> starbite-shared@0.1.0 build
+> tsc
+==> Build successful
+==> Deploying...
+==> Running 'npm run start:server'
+[starbite] listening on http://localhost:10000
+==> Your service is live 🎉
+```
+
+Render will show your URL at the top — something like `https://starbite-server.onrender.com`. **Copy this URL.** You need it in Step 1.3.
+
+### Verify the server is live
+
+In your browser, open `https://starbite-server.onrender.com/health`. You should see:
+
+```json
+{"ok": true, "ts": 1777558000000}
+```
+
+If you see that, the server is up. If you see "Bad Gateway" or a Render error page:
+- Check the Logs tab in Render — the error usually points at the cause.
+- Most common issue: build timed out or crashed. Re-deploy from the "Manual Deploy" → "Clear cache & deploy" option.
+- Tell Hara what the log says.
+
+### About the free tier
+
+Render's free Web Services **sleep after 15 minutes of no traffic**. The first request after a sleep takes ~30 seconds to wake up. That's fine for our team — once a playtest is in progress, the server stays awake. But if you visit the URL after a long pause, expect a 30-second hang on the first load. Tell the team this so they don't panic.
+
+---
+
+## Step 1.3 — Deploy the client (Static Site) (15 minutes)
+
+Back in the Render dashboard:
+
+1. Click **New +** → **Static Site**.
+2. Pick the `haramor/starbite` repo.
+3. Fill in the form:
+   - **Name:** `starbite` (or `starbite-yourname`)
+   - **Branch:** `main`
+   - **Root Directory:** *(leave blank)*
+   - **Build Command:** `npm install && npm run build:client`
+   - **Publish Directory:** `client/dist`
+4. Scroll down to **Environment Variables** and add:
+   - Key: `VITE_SERVER_URL`
+   - Value: `wss://YOUR-SERVER-URL-FROM-STEP-1.2.onrender.com`
+
+   ⚠️ Important: it's `wss://` not `https://`, no trailing slash. Example: `wss://starbite-server.onrender.com`
+5. Click **Create Static Site**.
+
+The build will take 2–3 minutes. When done, Render shows your client URL like `https://starbite.onrender.com`.
+
+### Verify the client is live
+
+Open `https://starbite.onrender.com` in a browser. You should see the Star Bite Diner title screen. Click **Create a room**.
+
+**If a room is created and you see the Lobby with a 4-letter code → it's working.** Send the URL to Hara to confirm she can join from her laptop.
+
+### If it doesn't connect
+
+Open browser devtools → Network tab → reload. Look for a failed `WebSocket` request. Common causes:
+
+- **`VITE_SERVER_URL` is wrong** — re-check the value in Render's env vars. Must be `wss://` not `https://`.
+- **CORS error** — the server needs to allow the static site's origin. If you see this, edit `server/src/index.ts` and just below `app.use(express.json());` add:
+  ```ts
+  app.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Headers", "*");
+    next();
+  });
+  ```
+  Commit and push to `shreya/track`. Then in Render's Web Service dashboard, hit "Manual Deploy" to re-deploy. Wait 3 min.
+- **Server is asleep** — open the server URL once to wake it, wait 30 sec, retry the client.
+
+---
+
+## Step 1.4 — Keep the server awake (10 minutes, optional but recommended)
+
+Render free-tier services sleep after 15 minutes. To make playtests smoother, we want the server to wake up fast and stay awake during a session.
+
+[uptimerobot.com](https://uptimerobot.com) is a free service that pings your URL every 5 minutes, keeping it warm.
+
+1. Sign up (free, no credit card).
+2. **Add Monitor** → HTTP(s) Monitor.
+3. URL: `https://starbite-server.onrender.com/health`
+4. Monitoring Interval: 5 minutes.
+5. Save.
+
+Now your server gets pinged every 5 minutes, never goes to sleep, and is always ready for a playtest.
+
+If you skip this, just tell the team "if it looks frozen on first load, give it 30 seconds."
+
+---
+
+## Step 1.5 — Tell the team (5 minutes)
+
+Once both URLs work end-to-end:
+
+1. Send Hara and Sky:
+   - **Player URL:** `https://starbite.onrender.com` (whatever Render gave you for the static site)
+   - **Server URL:** `https://starbite-server.onrender.com` (in case anyone needs to debug)
+2. Add the Player URL to the README. Open `README.md` and add at the very top:
+   ```markdown
+   **🎮 Play it: https://starbite.onrender.com**
+   ```
+   Commit and push to your branch:
+   ```bash
+   git add README.md
+   git commit -m "phase 1: add live URL to README"
+   git push
+   ```
+3. Send the Player URL to Helper 4 (the playtest lead) so they can run the external playtest from anywhere.
+
+**Phase 1 is done.** Take a break, then come back for Phase 2.
+
+---
+
+## Phase 1 done = ready to ship
+
+What you've built so far:
+- Server is live at a public `wss://...onrender.com` URL
+- Client is live at a public `https://...onrender.com` URL
+- Hara, Sky, and you can all create rooms / join them from your own laptops via the public URL
+- The URL is in the README
+- Helper 4 has the URL for external playtest
+
+That alone is a complete, ship-ready prototype. The team can run the Tuesday classroom demo from any laptop with this URL.
+
+---
+
+# 📊 Phase 2 — Stats & game history (2–3 hours)
+
+Now you'll build the second half of your track: a stats service that records every game and shows results on a friendly web page. When deployment is also done (Phase 1), the team will have a live `https://starbite-server.onrender.com/stats` URL to show off in the demo — "look, every round we've played in real classrooms, recorded right here."
 
 ## What you're building
 
@@ -38,8 +294,6 @@ You're going to do three things with these records:
 
 Most of this is already scaffolded — you'll be filling in the pieces marked `TODO: SHREYA`.
 
----
-
 ## Files you own
 
 ```
@@ -48,64 +302,32 @@ server/src/stats/
 ├── store.ts        ← saves records (in-memory now; you make it file-backed)
 ├── routes.ts       ← /stats/games and /stats endpoints (you upgrade the page)
 └── index.ts        ← entry point that the rest of the server calls into
-
-docs/shreya-kickoff.md  ← this file
 ```
 
-You **only edit files inside `server/src/stats/`**. The rest of the codebase calls into your module at two specific places:
+You **only edit files inside `server/src/stats/`** (and `.gitignore` once). The rest of the codebase calls into your module at two specific places:
 
 - `server/src/index.ts` calls `mountStatsRoutes(app)` and `loadFromDisk()` at server startup
 - `server/src/rooms/GameRoom.ts` calls `logGameResult(record)` every time a round ends
 
-If you find you need to change something outside your folder, ask Hara — usually it means there's a way to do it inside your folder.
+If you find you need to change something outside your folder, ask Hara.
 
 ---
 
-## Branch + git
+## Step 2.1 — Confirm the hooks fire (10 minutes)
 
-You'll work on a branch called **`shreya/stats`**. Before you start each session:
-
-```bash
-cd ~/Desktop/gamesfinal           # wherever you cloned the repo
-git fetch
-git checkout shreya/stats         # first time: git checkout -b shreya/stats
-git pull origin main              # bring in the team's latest
-```
-
-When you finish a step, commit and push:
+Run the server locally:
 
 ```bash
-git add server/src/stats/
-git commit -m "step 3: persist records to disk"
-git push -u origin shreya/stats
+npm run dev:server
 ```
 
-Don't merge to `main` yourself — Hara will pull your branch in once your stuff is solid.
-
----
-
-## Quickstart — get the game running locally
-
-From the repo root:
+In another terminal, run the client:
 
 ```bash
-npm install                     # first time only; takes ~1 minute
-npm run dev:server              # leave this running in one terminal
+npm run dev:client
 ```
 
-In a second terminal:
-
-```bash
-npm run dev:client              # leave this running too
-```
-
-You should see:
-- Server: `[starbite] listening on http://localhost:2567`
-- Client: `Local: http://localhost:5173/`
-
-Open **`http://localhost:5173`** in 5 browser tabs (different windows works too). In one tab, click **Create a room**. Read the 4-letter code at the top, type it into the other 4 tabs and click **Join**. Pick names, hit **Start round**.
-
-Play for a minute or two, then call meetings to vote each other out until satisfaction crashes — that ends the game.
+Open `http://localhost:5173`, play a quick round (5 tabs, vote each other out fast).
 
 In your terminal where the server is running, you should see something like:
 
@@ -117,27 +339,11 @@ In your terminal where the server is running, you should see something like:
 
 If you don't see that line, something's wrong — message Hara.
 
-Also try opening `http://localhost:2567/stats` in your browser. You'll see the stub page. Open `http://localhost:2567/stats/games` and you'll see `{"count":0,"games":[]}`. That's because the records vanish when the server restarts — your first task is to fix that.
+Also try opening `http://localhost:2567/stats` in your browser. You'll see the stub page. Open `http://localhost:2567/stats/games` and you'll see `{"count":0,"games":[]}`. That's because the records vanish when the server restarts — the next step fixes that.
 
 ---
 
-# Step 1 — Read the existing files (15 minutes)
-
-Open these 4 files and skim them. Don't change anything yet. The goal is to understand what's already there.
-
-- `server/src/stats/types.ts` — defines the `GameRecord` type
-- `server/src/stats/store.ts` — saves records in a plain array (in memory)
-- `server/src/stats/routes.ts` — defines `/stats/games` and `/stats`
-- `server/src/stats/index.ts` — the entry point that ties everything together
-
-Notice:
-- `appendRecord(record)` just pushes to an array
-- `loadFromDisk()` is empty (a stub)
-- The `/stats` route returns a placeholder HTML page
-
----
-
-# Step 2 — Persist records to disk (45 minutes)
+## Step 2.2 — Persist records to disk (45 minutes)
 
 **Goal:** when a game ends, append its record to a file at `server/data/games.jsonl`. (`.jsonl` = "JSON Lines" — one JSON object per line. Easy to append to and read back.)
 
@@ -150,8 +356,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { GameRecord } from "./types.js";
 
-// Path to the on-disk store. Resolved relative to the repo root.
-// __dirname when compiled is /server/dist/stats; so going up 3 lands at the repo root.
+// Path to the on-disk store. Resolved relative to where node was launched.
 const DATA_FILE = resolve(process.cwd(), "server", "data", "games.jsonl");
 
 // In-memory cache. Populated from disk at startup, appended to as new
@@ -202,7 +407,7 @@ In the terminal running the server, restart it (Ctrl-C then `npm run dev:server`
 [stats] loaded 0 game records from disk
 ```
 
-Now play a quick round (use 5 browser tabs, run a fast round). When it ends, check:
+Now play a quick round. When it ends, check:
 
 ```bash
 cat server/data/games.jsonl
@@ -218,36 +423,21 @@ Restart the server again. You should now see:
 
 And `curl http://localhost:2567/stats/games` should now return your record.
 
+### Important: the data folder is already gitignored
+
+`.gitignore` already has `server/data/` in it (added in Phase 1's initial scaffolding). Just confirm by running `git status` after a game — `server/data/games.jsonl` should NOT show up as a change. If it does, add it to `.gitignore` yourself.
+
 ### Commit your work
 
 ```bash
 git add server/src/stats/store.ts
-git commit -m "step 2: persist game records to games.jsonl"
-git push
-```
-
-You also need to make sure the `data/` folder isn't committed. Open `.gitignore` at the repo root and confirm there's a line:
-
-```
-node_modules/
-dist/
-```
-
-Then add a new line:
-
-```
-server/data/
-```
-
-```bash
-git add .gitignore
-git commit -m "ignore server/data folder"
+git commit -m "phase 2 step 2: persist game records to games.jsonl"
 git push
 ```
 
 ---
 
-# Step 3 — Build a real stats page (1.5 hours)
+## Step 2.3 — Build a real stats page (1.5 hours)
 
 **Goal:** `http://localhost:2567/stats` should show a clean table of recent games with satisfying readability.
 
@@ -429,32 +619,36 @@ If you've played a few rounds, you'll see a real summary. If you haven't, you'll
 
 ```bash
 git add server/src/stats/routes.ts
-git commit -m "step 3: real stats page with summary tiles and game table"
+git commit -m "phase 2 step 3: real stats page with summary tiles and game table"
 git push
 ```
 
+### Push the live deployment
+
+Since Phase 1 is done, your live server at `https://starbite-server.onrender.com/stats` will auto-deploy when Hara merges your branch into `main`. Until then, only your local server has the new page.
+
 ---
 
-# Step 4 — Polish & extend (whenever you have time)
+## Step 2.4 — Polish & extend (whenever you have time)
 
 You've got a working stats service. Anything below is bonus — pick whatever sounds fun.
 
 ### Easy extensions (~30 min each)
 
-- **Sortable columns.** Add click-to-sort to the table headers (search "vanilla js sortable table" — there are many small libraries or you can write it yourself in ~20 lines).
+- **Sortable columns.** Add click-to-sort to the table headers.
 - **A "delete all" button** that wipes the file. Add a route `POST /stats/clear` that deletes `games.jsonl`. Useful for the team to reset between demos.
 - **Filter by player count.** Add a small `<select>` above the table that filters games by 5-player, 6-player, etc.
 - **Show date grouping.** Group games by day with a header like "Today", "Yesterday".
 
 ### Medium extensions (~1 hour each)
 
-- **Per-game detail page.** When the user clicks on a row, show a detail view with everything the record contains, including the per-station accuracies as a chart.
+- **Per-game detail page.** When the user clicks on a row, show a detail view with everything the record contains.
 - **Charts.** Use [Chart.js](https://www.chartjs.org/) (one `<script>` tag, no build step) to add a "win rate over time" or "average satisfaction over time" chart.
 - **Track more data.** Want to know how many emergency meetings were called, or how many flags were placed at Review? Edit `types.ts` to add the field, then ask Hara to populate it in `endGame()`.
 
-### Hard extensions (~half a day each)
+### Harder extensions (~half a day each)
 
-- **Per-player stats.** Add a `players` array to GameRecord with each player's name, role, and whether they were ejected. Build a "leaderboard" or "best detectives" page.
+- **Per-player stats.** Add a `players` array to GameRecord with each player's name, role, and whether they were ejected.
 - **Round timeline.** Capture key events (label submissions, flags, meetings, ejections) with timestamps. Show them on a horizontal timeline.
 
 When you add fields, follow this pattern:
@@ -464,40 +658,64 @@ When you add fields, follow this pattern:
 
 ---
 
-# Tips for getting unstuck
+# 🛟 Tips for getting unstuck (both phases)
+
+## Phase 1 (deployment)
+
+**Build fails on Render with "command not found":**
+- Check `NODE_VERSION` env var is set to `20`.
+
+**Server says "Bad Gateway" but Render shows it as live:**
+- Server is sleeping. Visit `https://your-server.onrender.com/health` to wake it. Wait 30 sec.
+
+**Client loads but doesn't show the title screen:**
+- Open devtools → Console. The error usually says what's missing. Most likely `VITE_SERVER_URL` is unset.
+
+**"Network error" when clicking Create Room:**
+- WebSocket connection is failing. Check `VITE_SERVER_URL` is `wss://` (not `https://`).
+- Try the server's `/health` URL directly — if that fails, the server is the problem, not the client.
+
+**You changed something in the repo and want to redeploy:**
+- Render auto-deploys from `main` after any merge. If you push to `shreya/track`, it won't deploy until Hara merges into `main` — OR you can change the Render service's branch to `shreya/track` temporarily.
+
+## Phase 2 (stats)
 
 **Server won't start after you edit something:**
-- Look at the error message in the terminal carefully
-- Common cause: a missing comma or a missing `}`. The error usually points to the line.
+- Look at the error message in the terminal carefully — usually points at the line.
 - Restore the file from git if needed: `git checkout server/src/stats/store.ts`
 
 **Page is blank or shows "No games played yet" forever:**
-- Open browser devtools → Network tab. Reload the page. Look for the `/stats/games` request. Click it, look at the response. If it's a 500 error, the server logged the cause.
-- Open `server/data/games.jsonl` in a text editor — is there content? If the file is empty, the hook isn't firing. Confirm with Hara that her side is calling `logGameResult`.
+- Open browser devtools → Network tab. Reload the page. Look for the `/stats/games` request. Click it, look at the response.
+- Open `server/data/games.jsonl` in a text editor — is there content? If the file is empty, the hook isn't firing. Confirm with Hara.
 
 **TypeScript complains about types:**
-- The errors are usually self-explanatory if you read past the first line. "Property X does not exist on type Y" means you misspelled something.
+- Read past the first line of the error. "Property X does not exist on type Y" means you misspelled something.
 - Run `npm run typecheck --workspace=server` to see all type errors at once.
 
-**Git complains:**
-- `git status` — what's modified
-- `git diff` — what changed
-- If you're stuck, take a screenshot of the terminal and send to Hara.
+**Hard-refresh the browser** (Cmd-Shift-R) when you see stale content — the cached old version might still be loaded.
 
-**You see something weird on the page that you didn't write:**
-- Hard-refresh the browser (Cmd-Shift-R) — the cached old version might still be loaded.
+**You're stuck in any way:**
+- Take a screenshot of the terminal or browser, send to Hara with one sentence describing what you tried.
 
 ---
 
-## What "done" looks like
+# What "done" looks like
 
-Minimum: Steps 1–3 work and are pushed to the `shreya/stats` branch.
-- Records persist to `games.jsonl`
+**Minimum (Phase 1 only):**
+- Public Player URL works (e.g., `https://starbite.onrender.com`)
+- Hara, Sky, and you can join games via that URL
+- Player URL is in the README
+- Helper 4 has the URL for external playtest
+
+**Full track (Phase 1 + Phase 2):**
+- Everything above, PLUS
+- Game records persist to `games.jsonl`
 - They survive a server restart
 - `/stats` shows a real, readable summary
 
-That alone is a complete, useful contribution. Anything from Step 4 is bonus polish.
+**Stretch (Phase 1 + Phase 2 + bonus):**
+- Anything from Step 2.4
 
-You're owning a piece of the project the rest of the team isn't going to touch — when this lands, the teacher running the game in a real classroom will be able to look back at every round and use it in their debrief. That's a real piece of pedagogy.
+You're owning two pieces the rest of the team isn't going to touch. When this lands, the team will be able to share a URL with anyone, AND a teacher running the game in a real classroom will have a real history page they can use in the debrief. Both are real, useful contributions.
 
 If you get stuck, message Hara. Have fun.
