@@ -13,7 +13,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm install --workspaces && npm run build:shared
+    buildCommand: npm install --workspaces && npm run build
     startCommand: npm run start:server
     envVars:
       - key: NODE_VERSION
