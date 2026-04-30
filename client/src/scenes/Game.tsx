@@ -15,11 +15,11 @@ import { AlertBanner } from "../components/AlertBanner.js";
 import { ChatPanel } from "../components/ChatPanel.js";
 
 // How many tiles ahead of the player we project the move target while a key
-// is held. Server interpolates toward the target each tick; we re-aim every
-// few frames so the player keeps walking as long as the key is held.
-const MOVE_LOOKAHEAD_TILES = 4;
+// is held. Reduced from 4 to 1.5 for finer control and less overshoot.
+const MOVE_LOOKAHEAD_TILES = 1.5;
 // Re-send the move target this often while keys are held.
-const MOVE_INPUT_INTERVAL_MS = 120;
+// Reduced from 120ms to 60ms for more responsive movement.
+const MOVE_INPUT_INTERVAL_MS = 60;
 
 const MOVE_KEYS = new Set([
   "w", "a", "s", "d",
@@ -35,11 +35,12 @@ export function Game() {
   const moveSentRef = useRef<{ tx: number; ty: number } | null>(null);
 
   // Throttled move-target sender — skips redundant sends when target hasn't moved.
+  // Reduced threshold from 0.05 to 0.02 for more responsive movement updates.
   function sendMoveTo(tx: number, ty: number) {
     if (
       moveSentRef.current &&
-      Math.abs(moveSentRef.current.tx - tx) < 0.05 &&
-      Math.abs(moveSentRef.current.ty - ty) < 0.05
+      Math.abs(moveSentRef.current.tx - tx) < 0.02 &&
+      Math.abs(moveSentRef.current.ty - ty) < 0.02
     )
       return;
     moveSentRef.current = { tx, ty };
