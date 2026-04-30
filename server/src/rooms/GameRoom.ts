@@ -177,15 +177,28 @@ export class GameRoom extends Room<StarBiteState> {
   private removePlayer(sid: string) {
     const p = this.state.players.get(sid);
     if (!p) return;
-    // Reassign host if needed
     const wasHost = p.isHost;
     this.state.players.delete(sid);
     this.playerRoles.delete(sid);
     this.currentExamplePerPlayer.delete(sid);
-    if (wasHost) {
-      const next = [...this.state.players.values()][0];
-      if (next) next.isHost = true;
+    if (wasHost) this.reassignHost();
+  }
+
+  /**
+   * Pick a connected, non-ejected player and make them the host. Clears the
+   * isHost flag on everyone else first so we can never end up with two hosts.
+   * Skips disconnected players (mid-reconnect grace) — handing host to one
+   * would block "Start round" until their grace expired.
+   */
+  private reassignHost() {
+    let next: Player | undefined;
+    for (const player of this.state.players.values()) {
+      player.isHost = false;
+      if (!next && player.connected && player.isAlive) {
+        next = player;
+      }
     }
+    if (next) next.isHost = true;
   }
 
   // ============================================================
