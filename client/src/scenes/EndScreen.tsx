@@ -1,6 +1,7 @@
 // End-of-round screen. Shows winner, reveals roles.
 
 import { useGameStore, useStarBiteState } from "../store/game.js";
+import { ClientMsg } from "starbite-shared";
 
 const REASON_TEXT: Record<string, string> = {
   satisfaction_threshold: "Customer satisfaction held above the win threshold.",
@@ -12,10 +13,21 @@ const REASON_TEXT: Record<string, string> = {
 export function EndScreen() {
   const state = useStarBiteState();
   const end = useGameStore((s) => s.endGame);
+  const room = useGameStore((s) => s.room);
+  const mySessionId = useGameStore((s) => s.mySessionId);
   if (!state) return null;
 
   const winner = end?.winner ?? state.winner;
   const reason = end?.reason ?? state.endReason;
+  const me = state.players.get(mySessionId);
+  const isHost = !!me?.isHost;
+
+  function playAgain() {
+    room?.send(ClientMsg.ResetRound, {});
+    // Clear the stored end-game payload so the EndScreen state isn't stale
+    // if we cycle back here later.
+    useGameStore.getState().setEndGame(null);
+  }
 
   return (
     <div className="h-full w-full bg-diner-bg text-white flex flex-col items-center justify-center p-8">
@@ -62,12 +74,18 @@ export function EndScreen() {
           </div>
         </div>
 
-        <button
-          onClick={() => window.location.reload()}
-          className="w-full bg-diner-warm hover:brightness-110 text-black font-bold py-3 rounded-xl"
-        >
-          New round
-        </button>
+        {isHost ? (
+          <button
+            onClick={playAgain}
+            className="w-full bg-diner-warm hover:brightness-110 text-black font-bold py-3 rounded-xl"
+          >
+            Play again
+          </button>
+        ) : (
+          <div className="text-center text-sm opacity-60">
+            Waiting for the host to start a new round…
+          </div>
+        )}
       </div>
     </div>
   );

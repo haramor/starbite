@@ -199,7 +199,50 @@ async function main() {
     check(`record durationSec is positive`, r.durationSec > 0);
   }
 
-  console.log(`\n[8] CLEANUP`);
+  console.log(`\n[8] RESET ROUND (host clicks "Play again")`);
+  // Host calls reset_round; should wipe per-round state and return to lobby.
+  hostRoom.send("reset_round", {});
+  await sleep(600);
+  check(`phase=lobby after reset`, hostRoom.state.phase === "lobby");
+  check(`satisfaction reset to 100`, hostRoom.state.satisfaction === 100);
+  check(`meetingsRemaining reset to 2`, hostRoom.state.meetingsRemaining === 2);
+  check(`winner cleared`, hostRoom.state.winner === "");
+  check(`customers cleared`, hostRoom.state.customers.length === 0);
+  check(`activeCustomer cleared`, !hostRoom.state.activeCustomer);
+  check(`meeting cleared`, !hostRoom.state.meeting);
+  // All players revived
+  let aliveCount = 0;
+  let withRevealedRole = 0;
+  for (const p of hostRoom.state.players.values()) {
+    if (p.isAlive) aliveCount++;
+    if (p.revealedRole) withRevealedRole++;
+  }
+  check(`all ${NUM_PLAYERS} players revived`, aliveCount === NUM_PLAYERS);
+  check(`no revealed roles after reset`, withRevealedRole === 0);
+  // Stations cleared
+  let totalExamples = 0;
+  for (const s of hostRoom.state.stations.values()) {
+    totalExamples += s.examples.length;
+  }
+  check(`all station examples cleared`, totalExamples === 0);
+  // exactly 1 host (invariant should still hold)
+  let hostFlagsAfter = 0;
+  for (const p of hostRoom.state.players.values()) if (p.isHost) hostFlagsAfter++;
+  check(`exactly 1 host after reset`, hostFlagsAfter === 1);
+
+  console.log(`\n[9] PLAY ANOTHER ROUND (verify reset is fully clean)`);
+  // Wire up a fresh role-assignment listener (the previous one is still attached but in a stale closure)
+  const roles2 = new Map();
+  hostRoom.onMessage("role_assigned", (msg) => roles2.set(hostRoom.sessionId, msg.role));
+  for (const j of joiners) {
+    j.room.onMessage("role_assigned", (msg) => roles2.set(j.room.sessionId, msg.role));
+  }
+  hostRoom.send("start_game", {});
+  await sleep(800);
+  check(`second round phase=playing`, hostRoom.state.phase === "playing");
+  check(`second round assigned ${NUM_PLAYERS} roles`, roles2.size === NUM_PLAYERS);
+
+  console.log(`\n[10] CLEANUP`);
   await hostRoom.leave(true);
   for (const j of joiners) await j.room.leave(true);
   await sleep(300);

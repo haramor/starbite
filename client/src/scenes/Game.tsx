@@ -6,13 +6,25 @@
 
 import { useEffect, useRef } from "react";
 import { useGameStore, useStarBiteState } from "../store/game.js";
-import { ClientMsg, type Player } from "starbite-shared";
+import { ClientMsg, MAP_W, MAP_H } from "starbite-shared";
 import { GameMap } from "../components/Map.js";
 import { HUD } from "../components/HUD.js";
 import { StationModal } from "../components/StationModal.js";
 import { CustomerTicker } from "../components/customer/CustomerTicker.js";
 import { AlertBanner } from "../components/AlertBanner.js";
 import { ChatPanel } from "../components/ChatPanel.js";
+
+// How many tiles ahead of the player we project the move target while a key
+// is held. Server interpolates toward the target each tick; we re-aim every
+// few frames so the player keeps walking as long as the key is held.
+const MOVE_LOOKAHEAD_TILES = 4;
+// Re-send the move target this often while keys are held.
+const MOVE_INPUT_INTERVAL_MS = 120;
+
+const MOVE_KEYS = new Set([
+  "w", "a", "s", "d",
+  "arrowup", "arrowdown", "arrowleft", "arrowright",
+]);
 
 export function Game() {
   const room = useGameStore((s) => s.room);
@@ -22,38 +34,81 @@ export function Game() {
   const me = state?.players.get(mySessionId);
   const moveSentRef = useRef<{ tx: number; ty: number } | null>(null);
 
-  // Throttled move-target sender
+  // Throttled move-target sender — skips redundant sends when target hasn't moved.
   function sendMoveTo(tx: number, ty: number) {
     if (
       moveSentRef.current &&
-      Math.abs(moveSentRef.current.tx - tx) < 0.1 &&
-      Math.abs(moveSentRef.current.ty - ty) < 0.1
+      Math.abs(moveSentRef.current.tx - tx) < 0.05 &&
+      Math.abs(moveSentRef.current.ty - ty) < 0.05
     )
       return;
     moveSentRef.current = { tx, ty };
     room?.send(ClientMsg.Move, { tx, ty });
   }
 
-  // Keyboard input for movement (WASD/arrows nudge target by 1 tile)
+  // Smooth held-key movement. We track which direction keys are currently
+  // held, and on a fast interval (120ms) we re-aim the move target a few
+  // tiles ahead in the held direction. The server interpolates toward the
+  // target between updates, so the player walks continuously while keys are
+  // held and stops when they're released.
   useEffect(() => {
-    if (!me) return;
-    function onKey(e: KeyboardEvent) {
-      if (!me) return;
-      if (me.currentStation) return; // no movement while in station modal
+    if (!room) return;
+    const held = new Set<string>();
+
+    function onKeyDown(e: KeyboardEvent) {
+      const k = e.key.toLowerCase();
+      if (!MOVE_KEYS.has(k)) return;
+      // Don't capture keystrokes that came from inputs (chat, name field, etc.).
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
+      held.add(k);
+      e.preventDefault();
+    }
+    function onKeyUp(e: KeyboardEvent) {
+      held.delete(e.key.toLowerCase());
+    }
+    function onBlur() {
+      // If the window loses focus, drop all held keys so the player doesn't
+      // get stuck walking when the user alt-tabs.
+      held.clear();
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+
+    const interval = setInterval(() => {
+      if (held.size === 0) return;
+      // Read the player's current position FRESH each tick (refs are out of date)
+      const meNow = room.state.players.get(room.sessionId);
+      if (!meNow || !meNow.isAlive || meNow.currentStation) return;
+
       let dx = 0;
       let dy = 0;
-      if (e.key === "w" || e.key === "ArrowUp") dy = -1;
-      if (e.key === "s" || e.key === "ArrowDown") dy = 1;
-      if (e.key === "a" || e.key === "ArrowLeft") dx = -1;
-      if (e.key === "d" || e.key === "ArrowRight") dx = 1;
+      if (held.has("w") || held.has("arrowup")) dy -= 1;
+      if (held.has("s") || held.has("arrowdown")) dy += 1;
+      if (held.has("a") || held.has("arrowleft")) dx -= 1;
+      if (held.has("d") || held.has("arrowright")) dx += 1;
       if (dx === 0 && dy === 0) return;
-      e.preventDefault();
-      sendMoveTo(me.tx + dx, me.ty + dy);
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+
+      // Normalize so diagonal isn't faster than orthogonal
+      const len = Math.sqrt(dx * dx + dy * dy);
+      const nx = dx / len;
+      const ny = dy / len;
+
+      const tx = Math.max(0, Math.min(MAP_W - 1, meNow.x + nx * MOVE_LOOKAHEAD_TILES));
+      const ty = Math.max(0, Math.min(MAP_H - 1, meNow.y + ny * MOVE_LOOKAHEAD_TILES));
+      sendMoveTo(tx, ty);
+    }, MOVE_INPUT_INTERVAL_MS);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
+      clearInterval(interval);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [me?.sessionId, me?.tx, me?.ty, me?.currentStation]);
+  }, [room?.sessionId]);
 
   if (!state || !room || !me) return null;
 

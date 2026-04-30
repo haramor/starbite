@@ -63,7 +63,13 @@ export function HUD() {
         </div>
 
         <div className="flex flex-col items-center gap-2 pointer-events-auto">
-          <div className="bg-diner-panel/90 rounded-xl px-4 py-2 font-display text-xl">
+          <div
+            className={`rounded-xl px-4 py-2 font-display text-xl ${
+              remaining > 0 && remaining <= 30
+                ? "bg-diner-bad text-white animate-pulse"
+                : "bg-diner-panel/90 text-white"
+            }`}
+          >
             {mins}:{secs.toString().padStart(2, "0")}
           </div>
           <button

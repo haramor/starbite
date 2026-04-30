@@ -34,6 +34,8 @@ export const ClientMsg = {
   CastVote: "cast_vote",
   /** Lobby chat / in-meeting chat. */
   Chat: "chat",
+  /** Host clicks "Play again" on the EndScreen — wipe per-round state, return to lobby. */
+  ResetRound: "reset_round",
 } as const;
 
 export type ClientMsg = (typeof ClientMsg)[keyof typeof ClientMsg];
@@ -179,6 +181,7 @@ export interface ClientPayloadMap {
   [ClientMsg.CallMeeting]: Record<string, never>;
   [ClientMsg.CastVote]: CastVotePayload;
   [ClientMsg.Chat]: ChatPayload;
+  [ClientMsg.ResetRound]: Record<string, never>;
 }
 
 export interface ServerPayloadMap {

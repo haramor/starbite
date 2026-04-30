@@ -142,6 +142,7 @@ export class GameRoom extends Room<StarBiteState> {
     );
     this.onMessage(ClientMsg.CallMeeting, (c) => this.handleCallMeeting(c));
     this.onMessage(ClientMsg.CastVote, (c, p: CastVotePayload) => this.handleCastVote(c, p));
+    this.onMessage(ClientMsg.ResetRound, (c) => this.handleResetRound(c));
     this.onMessage(ClientMsg.Chat, (c, p: { text: string }) => {
       // For MVP: simple broadcast. Sky's track can render this.
       this.broadcast("chat", { from: c.sessionId, text: String(p?.text ?? "").slice(0, 200) });
@@ -258,6 +259,67 @@ export class GameRoom extends Room<StarBiteState> {
       `[room ${this.state.code}] starting with ${sids.length} players, ` +
         `${[...this.playerRoles.values()].filter((r) => r === "saboteur").length} saboteurs`
     );
+  }
+
+  private handleResetRound(client: Client) {
+    const player = this.state.players.get(client.sessionId);
+    if (!player?.isHost) {
+      this.sendError(client, "not_host", "Only the host can start a new round.");
+      return;
+    }
+    if (this.state.phase !== "ended") {
+      this.sendError(client, "not_ended", "Round has not ended yet.");
+      return;
+    }
+    this.resetRound();
+  }
+
+  /**
+   * Wipes per-round state and returns the room to the lobby phase. Players,
+   * names, and avatars are kept; everything else is cleared. Called when the
+   * host clicks "Play again" on the EndScreen.
+   */
+  private resetRound() {
+    // Top-level state
+    this.state.phase = "lobby";
+    this.state.satisfaction = INITIAL_SATISFACTION;
+    this.state.meetingsRemaining = MAX_MEETINGS_PER_ROUND;
+    this.state.winner = "";
+    this.state.endReason = "";
+    this.state.roundEndsAt = 0;
+    this.state.activeCustomer = undefined;
+    this.state.customers.clear();
+    this.state.meeting = undefined;
+
+    // Per-station: clear examples and reset accuracy
+    for (const station of this.state.stations.values()) {
+      station.examples.clear();
+      station.accuracy = 100;
+      station.activePlayerCount = 0;
+    }
+
+    // Per-player: revive everyone, clear station, hide role, respawn
+    for (const player of this.state.players.values()) {
+      player.isAlive = true;
+      player.currentStation = "";
+      player.revealedRole = "";
+      player.isLingering = false;
+      player.poisonCooldownEndsAt = 0;
+      player.x = SPAWN_AREA.x + Math.random() * SPAWN_AREA.w;
+      player.y = SPAWN_AREA.y + Math.random() * SPAWN_AREA.h;
+      player.tx = player.x;
+      player.ty = player.y;
+    }
+
+    // Server-only state
+    this.playerRoles.clear();
+    this.lastFlagAt.clear();
+    this.currentExamplePerPlayer.clear();
+    this.accuracyHistory.clear();
+    this.nextCustomerAt = 0;
+    this.roundStartedAt = 0;
+
+    console.log(`[room ${this.state.code}] round reset; back to lobby`);
   }
 
   private handleMove(client: Client, p: MovePayload) {

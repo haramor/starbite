@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useGameStore, useStarBiteState } from "../store/game.js";
-import { ClientMsg, MIN_PLAYERS } from "starbite-shared";
+import { ClientMsg, MIN_PLAYERS, SABOTEUR_COUNTS } from "starbite-shared";
 
 export function Lobby() {
   const room = useGameStore((s) => s.room);
@@ -21,6 +21,10 @@ export function Lobby() {
 
   const players = [...state.players.values()];
   const canStart = me?.isHost && players.length >= MIN_PLAYERS;
+
+  // Preview of role distribution if this many players started the round.
+  const sabPreview = SABOTEUR_COUNTS[players.length] ?? Math.max(1, Math.floor(players.length / 3));
+  const trainerPreview = players.length - sabPreview;
 
   function commitProfile() {
     room?.send(ClientMsg.SetProfile, { name, avatarId });
@@ -46,6 +50,16 @@ export function Lobby() {
             </div>
           </div>
         </div>
+
+        {players.length >= MIN_PLAYERS && (
+          <div className="bg-diner-panel/60 rounded-xl px-4 py-3 text-sm flex items-center justify-center gap-2">
+            <span className="opacity-60">This round will have</span>
+            <span className="font-bold text-diner-good">{trainerPreview} trainers</span>
+            <span className="opacity-60">and</span>
+            <span className="font-bold text-diner-bad">{sabPreview} saboteurs</span>
+            <span className="opacity-60">— hidden among them.</span>
+          </div>
+        )}
 
         <div className="bg-diner-panel rounded-2xl p-5">
           <div className="text-sm opacity-70 mb-3">You</div>
