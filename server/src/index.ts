@@ -15,6 +15,13 @@ const PORT = Number(process.env.PORT ?? 2567);
 const app = express();
 app.use(express.json());
 
+// Allow cross-origin requests from the static client on a different Render domain.
+app.use((_req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "*");
+  next();
+});
+
 app.get("/health", (_req, res) => {
   res.json({ ok: true, ts: Date.now() });
 });

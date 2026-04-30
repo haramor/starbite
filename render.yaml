@@ -1,0 +1,26 @@
+services:
+  # ── Colyseus game server ──────────────────────────────────────────────────
+  - type: web
+    name: starbite-server
+    env: node
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: npm install && npm run build:shared
+    startCommand: npm run start:server
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+
+  # ── React client (static site) ────────────────────────────────────────────
+  - type: web
+    name: starbite
+    env: static
+    branch: main
+    buildCommand: npm install && npm run build:client
+    staticPublishPath: client/dist
+    envVars:
+      # After deploying the server above, fill this in with:
+      #   wss://starbite-server.onrender.com   (use wss://, not https://)
+      - key: VITE_SERVER_URL
+        sync: false
