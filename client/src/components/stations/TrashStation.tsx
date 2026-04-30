@@ -157,9 +157,9 @@ export function TrashStation({ isSaboteur }: Props) {
         {/* Drag overlay for visual feedback */}
         <DragOverlay>
           {draggedItem ? (
-            <div className="bg-diner-bg rounded-xl p-6 text-center opacity-80 rotate-3">
+            <div className="text-center rotate-3 pointer-events-none">
               <div className="text-7xl mb-3">{example.display.emoji ?? "📦"}</div>
-              <div className="text-base font-bold">
+              <div className="text-base font-bold text-white">
                 {example.display.name ?? "Item"}
               </div>
             </div>
