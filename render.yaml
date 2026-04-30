@@ -1,0 +1,24 @@
+# Render blueprint — single web service that serves both the Colyseus WebSocket
+# and the built React client as static files.
+#
+# To deploy: connect this repo to Render, click "New + Blueprint" → select repo.
+# Render reads this file and creates the service automatically. No manual env
+# vars to set.
+#
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: starbite
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:server
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: NODE_ENV
+        value: production
+    # Render auto-assigns a port; the server reads process.env.PORT.
+    healthCheckPath: /health

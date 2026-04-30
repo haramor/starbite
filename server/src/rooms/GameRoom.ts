@@ -517,6 +517,23 @@ export class GameRoom extends Room<StarBiteState> {
   private handleCastVote(client: Client, p: CastVotePayload) {
     const m = this.state.meeting;
     if (!m || m.phase !== "voting") return;
+
+    // Voter must exist and still be alive (ejected players don't get to vote).
+    const voter = this.state.players.get(client.sessionId);
+    if (!voter?.isAlive) {
+      this.sendError(client, "cant_vote", "You can't vote — you've been ejected.");
+      return;
+    }
+
+    // Target must be "skip" or a sessionId of a current alive player.
+    if (p.target !== "skip") {
+      const targetPlayer = this.state.players.get(p.target);
+      if (!targetPlayer || !targetPlayer.isAlive) {
+        this.sendError(client, "bad_target", "Vote target is not in the round.");
+        return;
+      }
+    }
+
     const existing = m.votes.find((v) => v.voterSessionId === client.sessionId);
     if (existing) {
       existing.target = p.target;

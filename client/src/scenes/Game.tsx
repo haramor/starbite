@@ -13,6 +13,7 @@ import { StationModal } from "../components/StationModal.js";
 import { CustomerTicker } from "../components/customer/CustomerTicker.js";
 import { AlertBanner } from "../components/AlertBanner.js";
 import { ChatPanel } from "../components/ChatPanel.js";
+import { HowToPlayModal } from "../components/HowToPlayModal.js";
 
 // How many tiles ahead of the player we project the move target while a key
 // is held. Reduced from 4 to 1.5 for finer control and less overshoot.
@@ -33,6 +34,10 @@ export function Game() {
   const myRole = useGameStore((s) => s.myRole);
   const me = state?.players.get(mySessionId);
   const moveSentRef = useRef<{ tx: number; ty: number } | null>(null);
+  // Set when the player clicks a station from far away. The input loop
+  // watches their position and fires EnterStation once they're close enough.
+  const pendingEnterRef = useRef<string | null>(null);
+  const [showHowTo, setShowHowTo] = useState(false);
 
   // Throttled move-target sender — skips redundant sends when target hasn't moved.
   // Reduced threshold from 0.05 to 0.02 for more responsive movement updates.
@@ -45,6 +50,26 @@ export function Game() {
       return;
     moveSentRef.current = { tx, ty };
     room?.send(ClientMsg.Move, { tx, ty });
+  }
+
+  function handleStationClick(stationId: string) {
+    if (!room) return;
+    const station = room.state.stations.get(stationId);
+    if (!station) return;
+    const meNow = room.state.players.get(room.sessionId);
+    if (!meNow) return;
+
+    const dx = meNow.x - station.x;
+    const dy = meNow.y - station.y;
+    if (dx * dx + dy * dy <= 2.0) {
+      // Already close enough — enter immediately.
+      room.send(ClientMsg.EnterStation, { stationId });
+      pendingEnterRef.current = null;
+    } else {
+      // Walk there, then auto-enter when proximate.
+      pendingEnterRef.current = stationId;
+      sendMoveTo(station.x, station.y);
+    }
   }
 
   // Smooth held-key movement. We track which direction keys are currently
@@ -89,10 +114,34 @@ export function Game() {
     window.addEventListener("blur", onBlur);
 
     const interval = setInterval(() => {
-      if (held.size === 0) return;
       // Read the player's current position FRESH each tick (refs are out of date)
       const meNow = room.state.players.get(room.sessionId);
-      if (!meNow || !meNow.isAlive || meNow.currentStation) return;
+      if (!meNow || !meNow.isAlive) return;
+
+      // Pending click-to-enter-station: fire EnterStation once we're proximate.
+      // Held keys cancel the pending intent (player changed their mind).
+      if (pendingEnterRef.current) {
+        if (held.size > 0) {
+          pendingEnterRef.current = null;
+        } else {
+          const station = room.state.stations.get(pendingEnterRef.current);
+          if (!station) {
+            pendingEnterRef.current = null;
+          } else {
+            const dx2 = meNow.x - station.x;
+            const dy2 = meNow.y - station.y;
+            if (dx2 * dx2 + dy2 * dy2 <= 2.0) {
+              room.send(ClientMsg.EnterStation, {
+                stationId: pendingEnterRef.current,
+              });
+              pendingEnterRef.current = null;
+            }
+          }
+        }
+      }
+
+      if (held.size === 0) return;
+      if (meNow.currentStation) return;
 
       let dx = 0;
       let dy = 0;
@@ -134,10 +183,12 @@ export function Game() {
       <GameMap
         state={state}
         mySessionId={mySessionId}
-        onTileClick={(tx, ty) => sendMoveTo(tx, ty)}
-        onStationClick={(stationId) =>
-          room.send(ClientMsg.EnterStation, { stationId })
-        }
+        onTileClick={(tx, ty) => {
+          // Walking to an arbitrary tile cancels any pending station entry.
+          pendingEnterRef.current = null;
+          sendMoveTo(tx, ty);
+        }}
+        onStationClick={handleStationClick}
       />
 
       {atStation && (
@@ -152,6 +203,17 @@ export function Game() {
 
       {/* Saboteur HUD — role badge + poison cooldown countdown */}
       {myRole === "saboteur" && me && <SaboteurHUD me={me} />}
+
+      {/* "?" help button — re-opens the HowToPlay modal */}
+      <button
+        onClick={() => setShowHowTo(true)}
+        className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-diner-panel/90 hover:bg-diner-panel text-white text-sm font-bold shadow"
+        title="How to play"
+      >
+        ?
+      </button>
+
+      {showHowTo && <HowToPlayModal onClose={() => setShowHowTo(false)} />}
 
       <div className="absolute bottom-2 left-2 text-xs opacity-40">
         WASD / arrows to move · click stations to enter
