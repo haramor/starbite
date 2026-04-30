@@ -8,6 +8,7 @@ import { monitor } from "@colyseus/monitor";
 import express from "express";
 import { createServer } from "http";
 import { GameRoom } from "./rooms/GameRoom.js";
+import { mountStatsRoutes, loadFromDisk } from "./stats/index.js";
 
 const PORT = Number(process.env.PORT ?? 2567);
 
@@ -20,6 +21,10 @@ app.get("/health", (_req, res) => {
 
 // Colyseus monitor — handy during dev, lets you peek at rooms/state
 app.use("/colyseus", monitor());
+
+// Stats / game history routes — owned by /server/src/stats/
+loadFromDisk();
+mountStatsRoutes(app);
 
 const httpServer = createServer(app);
 

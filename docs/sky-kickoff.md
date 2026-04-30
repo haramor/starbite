@@ -65,7 +65,7 @@ You own **anything related to mini-games, customer interaction, and player feedb
 Plus any new components under `client/src/components/customer/` or `client/src/components/stations/` if you split things.
 
 ### Files Hara is responsible for (DO NOT EDIT WITHOUT TALKING TO SKY)
-- Any file in `/server/`
+- Any file in `/server/` EXCEPT `/server/src/stats/`
 - `client/src/scenes/Game.tsx` (orchestrates everything — coordinate before changing)
 - `client/src/scenes/Lobby.tsx`
 - `client/src/scenes/Meeting.tsx`
@@ -73,6 +73,9 @@ Plus any new components under `client/src/components/customer/` or `client/src/c
 - `client/src/components/Map.tsx`
 - `client/src/components/StationModal.tsx`
 - `client/src/net/client.ts`
+
+### Files Shreya owns (DO NOT EDIT)
+- Anything inside `/server/src/stats/` — that's her track (game history + stats page)
 
 If you absolutely need to change one of Hara's files (say, to wire in a new component), have Sky text Hara to coordinate. Better to add a new file than to edit an existing one.
 

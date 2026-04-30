@@ -72,6 +72,7 @@ import { assignRoles } from "../logic/roles.js";
 import { computeExampleAccuracy, computeStationAccuracy } from "../logic/accuracy.js";
 import { pickOrder, rollCustomerOutcome } from "../logic/customer.js";
 import { loadContent, type ContentBundle } from "../content/loader.js";
+import { logGameResult } from "../stats/index.js";
 
 const TICK_MS = 50;
 
@@ -88,6 +89,7 @@ export class GameRoom extends Room<StarBiteState> {
   private currentExamplePerPlayer = new Map<string, string>(); // sessionId -> exampleId
   private accuracyHistory = new Map<string, Array<{ at: number; acc: number }>>(); // stationId -> recent samples
   private tickHandle: NodeJS.Timeout | null = null;
+  private roundStartedAt = 0;
 
   override async onCreate(options: { code?: string } = {}) {
     this.setState(new StarBiteState());
@@ -218,7 +220,8 @@ export class GameRoom extends Room<StarBiteState> {
     }
 
     this.state.phase = "playing";
-    this.state.roundEndsAt = Date.now() + ROUND_DURATION_SEC * 1000;
+    this.roundStartedAt = Date.now();
+    this.state.roundEndsAt = this.roundStartedAt + ROUND_DURATION_SEC * 1000;
     this.nextCustomerAt = Date.now() + FIRST_CUSTOMER_DELAY_MS;
 
     console.log(
@@ -684,6 +687,37 @@ export class GameRoom extends Room<StarBiteState> {
       finalSatisfaction: this.state.satisfaction,
       roles,
     } satisfies GameEndedPayload);
+
+    // Hand off a record of the round to the stats module (Shreya's track).
+    const endedAt = Date.now();
+    const customers = [...this.state.customers];
+    const finalAccuracies: { [stationId: string]: number } = {};
+    for (const [id, station] of this.state.stations) {
+      finalAccuracies[id] = station.accuracy;
+    }
+    logGameResult({
+      code: this.state.code,
+      startedAt: this.roundStartedAt,
+      endedAt,
+      durationSec: this.roundStartedAt
+        ? Math.round((endedAt - this.roundStartedAt) / 1000)
+        : 0,
+      winner,
+      endReason: reason,
+      finalSatisfaction: this.state.satisfaction,
+      numPlayers: this.state.players.size,
+      numSaboteurs: [...this.playerRoles.values()].filter(
+        (r) => r === "saboteur"
+      ).length,
+      numEjections: [...this.state.players.values()].filter((p) => !p.isAlive)
+        .length,
+      customersServed: customers.length,
+      customersHappy: customers.filter((c) => c.outcome === "happy").length,
+      customersConfused: customers.filter((c) => c.outcome === "confused")
+        .length,
+      customersAngry: customers.filter((c) => c.outcome === "angry").length,
+      finalAccuracies,
+    });
   }
 
   private sendError(client: Client, code: string, message: string) {

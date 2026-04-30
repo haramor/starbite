@@ -50,8 +50,9 @@ npm run build          # production build
 
 | Person | Track | Files they own |
 | --- | --- | --- |
-| **Hara** | World & Roles | server/, client lobby+game+meeting+endscreen+map+stationmodal scenes, net/, store/ |
+| **Hara** | World & Roles | server/ (except /stats/), client lobby+game+meeting+endscreen+map+stationmodal scenes, net/, store/ |
 | **Sky** | Stations & Loop | client/src/components/stations/*, customer/*, HUD, AlertBanner, ChatPanel |
+| **Shreya** | Stats & history | server/src/stats/ — see `/docs/shreya-kickoff.md` |
 | Helpers (×5) | Content + assets + classroom + playtest + audio | see `/docs/helpers/` |
 
 **The contract:** `/shared/src/*.ts` is sacred. Don't change it without coordinating with the other coder, because both client and server depend on it.
@@ -59,6 +60,7 @@ npm run build          # production build
 **Branches:**
 - Hara: `hara/world`
 - Sky: `sky/stations`
+- Shreya: `shreya/stats`
 - Merge to `main` end-of-day Day 1 and Day 2.
 
 ---
