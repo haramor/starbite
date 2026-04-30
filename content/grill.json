@@ -1,0 +1,14 @@
+[
+  { "id": "g_001", "emoji": "🍔", "description": "Pale bun, raw pink center, no sear marks", "groundTruth": "rare" },
+  { "id": "g_002", "emoji": "🍔", "description": "Dark golden sear, juices running clear, firm to the touch", "groundTruth": "done" },
+  { "id": "g_003", "emoji": "🍔", "description": "Bright red center, very soft, cold to the touch", "groundTruth": "rare" },
+  { "id": "g_004", "emoji": "🍔", "description": "Crisp char on both sides, no pink visible, steaming", "groundTruth": "done" },
+  { "id": "g_005", "emoji": "🍔", "description": "Squishy patty, blood pooling on the plate", "groundTruth": "rare" },
+  { "id": "g_006", "emoji": "🍔", "description": "Even brown crust, piping hot center, slight sizzle", "groundTruth": "done" },
+  { "id": "g_007", "emoji": "🍔", "description": "Patty bends easily, completely pink inside", "groundTruth": "rare" },
+  { "id": "g_008", "emoji": "🍔", "description": "Patty holds shape, deep brown color, smells smoky", "groundTruth": "done" },
+  { "id": "g_009", "emoji": "🍔", "description": "Cool middle, surface barely warmed", "groundTruth": "rare" },
+  { "id": "g_010", "emoji": "🍔", "description": "Thoroughly cooked all the way through, well-browned", "groundTruth": "done" },
+  { "id": "g_011", "emoji": "🍔", "description": "Just placed on the grill, no color change yet", "groundTruth": "rare" },
+  { "id": "g_012", "emoji": "🍔", "description": "Crusty, dark on the outside, fully heated inside", "groundTruth": "done" }
+]

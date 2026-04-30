@@ -1,0 +1,9 @@
+[
+  { "id": "c_001", "name": "Captain Zorp",   "emoji": "👽", "color": "#9b59b6" },
+  { "id": "c_002", "name": "Nibbler",        "emoji": "🐙", "color": "#2ecc71" },
+  { "id": "c_003", "name": "Glorbax",        "emoji": "👾", "color": "#3498db" },
+  { "id": "c_004", "name": "Pip",            "emoji": "🤖", "color": "#e74c3c" },
+  { "id": "c_005", "name": "Greg",           "emoji": "🦑", "color": "#f1c40f" },
+  { "id": "c_006", "name": "Madame Vex",     "emoji": "🦊", "color": "#e91e63" },
+  { "id": "c_007", "name": "Bleep-3",        "emoji": "🛸", "color": "#1abc9c" }
+]

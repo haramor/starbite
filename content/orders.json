@@ -1,0 +1,63 @@
+[
+  {
+    "id": "o_001",
+    "customerName": "Captain Zorp",
+    "flavorText": "One done burger and recycle the wrapper, please!",
+    "requirements": [
+      { "stationId": "grill", "expectedValue": "done" },
+      { "stationId": "trash", "expectedValue": "recycle" }
+    ]
+  },
+  {
+    "id": "o_002",
+    "customerName": "Nibbler from Sector 9",
+    "flavorText": "I like 'em rare. And put the apple core in the right bin!",
+    "requirements": [
+      { "stationId": "grill", "expectedValue": "rare" },
+      { "stationId": "trash", "expectedValue": "compost" }
+    ]
+  },
+  {
+    "id": "o_003",
+    "customerName": "Glorbax",
+    "flavorText": "Burger fully cooked. And toss the styrofoam cup correctly!",
+    "requirements": [
+      { "stationId": "grill", "expectedValue": "done" },
+      { "stationId": "trash", "expectedValue": "landfill" }
+    ]
+  },
+  {
+    "id": "o_004",
+    "customerName": "Pip the Engineer",
+    "flavorText": "Just a quick bite — burger done please.",
+    "requirements": [
+      { "stationId": "grill", "expectedValue": "done" }
+    ]
+  },
+  {
+    "id": "o_005",
+    "customerName": "Greg",
+    "flavorText": "Toss this banana peel for me?",
+    "requirements": [
+      { "stationId": "trash", "expectedValue": "compost" }
+    ]
+  },
+  {
+    "id": "o_006",
+    "customerName": "Madame Vex",
+    "flavorText": "Rare burger, recycle my soda can. Chop chop.",
+    "requirements": [
+      { "stationId": "grill", "expectedValue": "rare" },
+      { "stationId": "trash", "expectedValue": "recycle" }
+    ]
+  },
+  {
+    "id": "o_007",
+    "customerName": "Bleep-3",
+    "flavorText": "Done burger. Recycle the box it came in.",
+    "requirements": [
+      { "stationId": "grill", "expectedValue": "done" },
+      { "stationId": "trash", "expectedValue": "recycle" }
+    ]
+  }
+]

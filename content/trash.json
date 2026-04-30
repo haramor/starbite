@@ -1,0 +1,17 @@
+[
+  { "id": "t_001", "name": "Banana peel",      "emoji": "🍌", "groundTruth": "compost" },
+  { "id": "t_002", "name": "Plastic water bottle", "emoji": "🧃", "groundTruth": "recycle" },
+  { "id": "t_003", "name": "Greasy pizza box", "emoji": "🍕", "groundTruth": "landfill" },
+  { "id": "t_004", "name": "Aluminum can",     "emoji": "🥫", "groundTruth": "recycle" },
+  { "id": "t_005", "name": "Apple core",       "emoji": "🍎", "groundTruth": "compost" },
+  { "id": "t_006", "name": "Used napkin",      "emoji": "🧻", "groundTruth": "compost" },
+  { "id": "t_007", "name": "Glass jar",        "emoji": "🫙", "groundTruth": "recycle" },
+  { "id": "t_008", "name": "Styrofoam cup",    "emoji": "🥤", "groundTruth": "landfill" },
+  { "id": "t_009", "name": "Cardboard box",    "emoji": "📦", "groundTruth": "recycle" },
+  { "id": "t_010", "name": "Eggshells",        "emoji": "🥚", "groundTruth": "compost" },
+  { "id": "t_011", "name": "Plastic straw",    "emoji": "🥤", "groundTruth": "landfill" },
+  { "id": "t_012", "name": "Newspaper",        "emoji": "📰", "groundTruth": "recycle" },
+  { "id": "t_013", "name": "Used chewing gum", "emoji": "🍬", "groundTruth": "landfill" },
+  { "id": "t_014", "name": "Coffee grounds",   "emoji": "☕", "groundTruth": "compost" },
+  { "id": "t_015", "name": "Tin foil",         "emoji": "🍱", "groundTruth": "recycle" }
+]
