@@ -108,7 +108,7 @@ Still in the `sounds/` folder:
    ```
 4. Commit changes.
 
-Tell Hara: "Sound effects uploaded."
+Text in the groupchat: "Sound effects uploaded."
 
 ---
 
