@@ -9,6 +9,35 @@ interface Props {
   isSaboteur: boolean;
 }
 
+// Improved logic to determine if a burger is rare based on description
+function isRareBasedOnDescription(description: string): boolean {
+  const desc = description.toLowerCase();
+
+  // Strong indicators of RARE (undercooked)
+  const rareIndicators = [
+    'pink', 'red', 'raw', 'cold', 'cool', 'uncooked', 'translucent',
+    'blood', 'juice', 'soft', 'squishy', 'wobble', 'limp', 'fresh from package',
+    'no heat', 'barely warm', 'thawed', 'just placed', 'mooing', 'scared'
+  ];
+
+  // Strong indicators of DONE (well-cooked)
+  const doneIndicators = [
+    'brown', 'char', 'crust', 'firm', 'hot', 'cooked through', 'sizzl', 'steam',
+    'crisp', 'toast', 'caramel', 'grey', 'bouncy', 'no pink', 'fully heated',
+    'well-browned', 'crusty'
+  ];
+
+  // Count indicators
+  const rareScore = rareIndicators.filter(indicator => desc.includes(indicator)).length;
+  const doneScore = doneIndicators.filter(indicator => desc.includes(indicator)).length;
+
+  // Special case: "no pink" should override pink mentions
+  if (desc.includes('no pink')) return false;
+
+  // If tied or unclear, default to done (safer for food safety!)
+  return rareScore > doneScore;
+}
+
 // Cooking-themed styling for labels
 const COOKING_CONFIG = {
   rare: {
@@ -137,8 +166,7 @@ export function GrillStation({ isSaboteur }: Props) {
             <div className="absolute inset-2 rounded-full bg-gradient-to-br from-amber-800 via-amber-700 to-amber-900"></div>
             {/* Pink center for rare, brown throughout for done - based on description */}
             <div className={`absolute inset-4 rounded-full ${
-              example.display.description?.toLowerCase().includes('pink') ||
-              example.display.name?.toLowerCase().includes('rare')
+              isRareBasedOnDescription(example.display.description || '')
                 ? 'bg-gradient-to-br from-pink-400 to-red-500'
                 : 'bg-gradient-to-br from-amber-800 to-amber-900'
             }`}></div>
