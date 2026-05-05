@@ -776,9 +776,10 @@ export class GameRoom extends Room<StarBiteState> {
   }
 
   private maybeAlertAccuracyDrop(stationId: string, oldAcc: number, newAcc: number) {
-    // Don't send accuracy alerts during lobby phase or if the game just started
+    // Don't send accuracy alerts during lobby phase, first minute of gameplay, or if game just started
     if (this.state.phase !== "playing") return;
-    if (Date.now() - this.roundStartedAt < 10000) return; // No alerts for first 10 seconds
+    if (Date.now() - this.roundStartedAt < 60000) return; // No alerts for first minute
+    if (oldAcc === 100) return; // Never alert when starting from 100% (fresh game)
 
     if (oldAcc - newAcc >= 15) {
       this.broadcast(ServerMsg.AccuracyAlert, {

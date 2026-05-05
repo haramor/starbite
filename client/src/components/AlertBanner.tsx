@@ -12,7 +12,7 @@ const STATION_ALERT_CONFIG = {
   review: { icon: "🔍", color: "from-red-600 to-blue-600", name: "Review & Security" }
 };
 
-function AlertContent({ alert }: { alert: AccuracyAlertPayload }) {
+function AlertContent({ alert, onDismiss }: { alert: AccuracyAlertPayload; onDismiss: () => void }) {
   const config = STATION_ALERT_CONFIG[alert.stationId as keyof typeof STATION_ALERT_CONFIG] ||
     { icon: "⚠️", color: "from-red-600 to-red-700", name: alert.stationId.toUpperCase() };
 
@@ -45,11 +45,20 @@ function AlertContent({ alert }: { alert: AccuracyAlertPayload }) {
               </div>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-xs opacity-80">Accuracy Drop</div>
-            <div className="text-2xl font-bold text-red-200">
-              -{dropAmount}%
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <div className="text-xs opacity-80">Accuracy Drop</div>
+              <div className="text-2xl font-bold text-red-200">
+                -{dropAmount}%
+              </div>
             </div>
+            <button
+              onClick={onDismiss}
+              className="text-white/80 hover:text-white bg-white/20 hover:bg-white/30 rounded-full w-8 h-8 flex items-center justify-center transition-colors z-20"
+              title="Dismiss alert"
+            >
+              ✕
+            </button>
           </div>
         </div>
 
@@ -115,7 +124,7 @@ export function AlertBanner() {
         absolute top-20 left-1/2 -translate-x-1/2 pointer-events-auto
         ${isExiting ? 'animate-[slideUpFade_0.5s_ease-in_forwards]' : ''}
       `}>
-        <AlertContent alert={show} />
+        <AlertContent alert={show} onDismiss={() => setShow(null)} />
       </div>
 
       {/* Emergency flash overlay */}

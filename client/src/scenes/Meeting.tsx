@@ -172,6 +172,9 @@ export function Meeting() {
 
         {m.phase === "results" && <ResultsReveal />}
       </div>
+
+      {/* Chat panel always visible during meeting */}
+      <ChatPanel />
     </div>
   );
 }
@@ -247,8 +250,6 @@ function ResultsReveal() {
           {(ejected.revealedRole ?? "trainer").toUpperCase()}
         </div>
       </div>
-
-      <ChatPanel />
     </div>
   );
 }
