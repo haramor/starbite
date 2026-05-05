@@ -57,6 +57,9 @@ import {
   type FlagSubmissionPayload,
   type RequestNewExamplePayload,
   type CastVotePayload,
+  type ReadyToVotePayload,
+  type SubmitVotePayload,
+  type QuitDiscussionPayload,
   type CurrentExamplePayload,
   type RoleAssignedPayload,
   type CustomerResultPayload,
@@ -142,6 +145,9 @@ export class GameRoom extends Room<StarBiteState> {
     );
     this.onMessage(ClientMsg.CallMeeting, (c) => this.handleCallMeeting(c));
     this.onMessage(ClientMsg.CastVote, (c, p: CastVotePayload) => this.handleCastVote(c, p));
+    this.onMessage(ClientMsg.ReadyToVote, (c, p: ReadyToVotePayload) => this.handleReadyToVote(c, p));
+    this.onMessage(ClientMsg.SubmitVote, (c, p: SubmitVotePayload) => this.handleSubmitVote(c, p));
+    this.onMessage(ClientMsg.QuitDiscussion, (c, p: QuitDiscussionPayload) => this.handleQuitDiscussion(c, p));
     this.onMessage(ClientMsg.ResetRound, (c) => this.handleResetRound(c));
     this.onMessage(ClientMsg.Chat, (c, p: { text: string }) => {
       // For MVP: simple broadcast. Sky's track can render this.
@@ -534,6 +540,7 @@ export class GameRoom extends Room<StarBiteState> {
       }
     }
 
+    // Update or create draft vote (not submitted yet)
     const existing = m.votes.find((v) => v.voterSessionId === client.sessionId);
     if (existing) {
       existing.target = p.target;
@@ -544,13 +551,74 @@ export class GameRoom extends Room<StarBiteState> {
       m.votes.push(v);
     }
 
-    // Check if everyone has voted - if so, end voting phase early
+    // Draft votes don't end the phase - only submitted votes do
+    // Players must call SubmitVote to finalize their choice
+  }
+
+  private handleReadyToVote(client: Client, p: ReadyToVotePayload) {
+    const m = this.state.meeting;
+    if (!m || m.phase !== "discussion") return;
+
+    // Player must be alive to indicate readiness
+    const player = this.state.players.get(client.sessionId);
+    if (!player?.isAlive) return;
+
+    // Add to ready list if not already there
+    if (!m.readyToVote.includes(client.sessionId)) {
+      m.readyToVote.push(client.sessionId);
+    }
+
+    // Check if everyone is ready - if so, move to voting phase early
     const aliveCount = [...this.state.players.values()].filter(p => p.isAlive).length;
-    if (m.votes.length >= aliveCount) {
-      // Everyone has voted - immediately move to results phase
+    if (m.readyToVote.length >= aliveCount) {
+      m.phase = "voting";
+      m.endsAt = Date.now() + this.cfgMeetingVoteSec * 1000;
+      // Clear ready list and votes for fresh start
+      m.readyToVote.clear();
+      m.votes.clear();
+      m.submittedVotes.clear();
+    }
+  }
+
+  private handleSubmitVote(client: Client, p: SubmitVotePayload) {
+    const m = this.state.meeting;
+    if (!m || m.phase !== "voting") return;
+
+    // Player must be alive and have a draft vote
+    const player = this.state.players.get(client.sessionId);
+    if (!player?.isAlive) return;
+
+    const existingVote = m.votes.find(v => v.voterSessionId === client.sessionId);
+    if (!existingVote) {
+      this.sendError(client, "no_draft_vote", "You must select a vote choice before submitting.");
+      return;
+    }
+
+    // Mark this player as having submitted their vote
+    if (!m.submittedVotes.includes(client.sessionId)) {
+      m.submittedVotes.push(client.sessionId);
+    }
+
+    // Check if everyone has submitted - if so, move to results early
+    const aliveCount = [...this.state.players.values()].filter(p => p.isAlive).length;
+    if (m.submittedVotes.length >= aliveCount) {
       m.phase = "results";
       m.endsAt = Date.now() + 3000; // 3 second results phase
     }
+  }
+
+  private handleQuitDiscussion(client: Client, p: QuitDiscussionPayload) {
+    const m = this.state.meeting;
+    if (!m) return;
+
+    // For now, just remove them from ready list if they were ready
+    const readyIndex = m.readyToVote.indexOf(client.sessionId);
+    if (readyIndex !== -1) {
+      m.readyToVote.splice(readyIndex, 1);
+    }
+
+    // Could potentially make them leave the station/meeting area
+    // But for simplicity, just let them stay and watch
   }
 
   // ============================================================
@@ -614,44 +682,62 @@ export class GameRoom extends Room<StarBiteState> {
   private tickMeeting() {
     const m = this.state.meeting;
     if (!m) return;
-    if (Date.now() < m.endsAt) return;
 
     if (m.phase === "discussion") {
-      m.phase = "voting";
-      m.endsAt = Date.now() + this.cfgMeetingVoteSec * 1000;
-      return;
+      // Move to voting if timer expired or everyone is ready
+      const aliveCount = [...this.state.players.values()].filter(p => p.isAlive).length;
+      const everyoneReady = m.readyToVote.length >= aliveCount;
+
+      if (Date.now() >= m.endsAt || everyoneReady) {
+        m.phase = "voting";
+        m.endsAt = Date.now() + this.cfgMeetingVoteSec * 1000;
+        // Clear ready list and votes for fresh start
+        m.readyToVote.clear();
+        m.votes.clear();
+        m.submittedVotes.clear();
+        return;
+      }
     }
     if (m.phase === "voting") {
-      // Tally votes
-      const tally = new Map<string, number>();
-      for (const v of m.votes) {
-        tally.set(v.target, (tally.get(v.target) ?? 0) + 1);
-      }
-      let topTarget = "skip";
-      let topCount = 0;
-      let tie = false;
-      for (const [t, c] of tally) {
-        if (c > topCount) {
-          topTarget = t;
-          topCount = c;
-          tie = false;
-        } else if (c === topCount) {
-          tie = true;
-        }
-      }
-      const ejected = tie || topTarget === "skip" ? "" : topTarget;
-      m.result = tie || topTarget === "skip" ? "skip" : topTarget;
-      m.phase = "results";
-      m.endsAt = Date.now() + 5000;
+      // Move to results if timer expired or everyone submitted their votes
+      const aliveCount = [...this.state.players.values()].filter(p => p.isAlive).length;
+      const everyoneSubmitted = m.submittedVotes.length >= aliveCount;
 
-      if (ejected) {
-        const target = this.state.players.get(ejected);
-        if (target) {
-          target.isAlive = false;
-          target.revealedRole = this.playerRoles.get(ejected) ?? "trainer";
+      if (Date.now() >= m.endsAt || everyoneSubmitted) {
+        // Tally votes (only count submitted votes)
+        const tally = new Map<string, number>();
+        for (const v of m.votes) {
+          // Only count votes from players who submitted
+          if (m.submittedVotes.includes(v.voterSessionId)) {
+            tally.set(v.target, (tally.get(v.target) ?? 0) + 1);
+          }
         }
+        let topTarget = "skip";
+        let topCount = 0;
+        let tie = false;
+        for (const [t, c] of tally) {
+          if (c > topCount) {
+            topTarget = t;
+            topCount = c;
+            tie = false;
+          } else if (c === topCount) {
+            tie = true;
+          }
+        }
+        const ejected = tie || topTarget === "skip" ? "" : topTarget;
+        m.result = tie || topTarget === "skip" ? "skip" : topTarget;
+        m.phase = "results";
+        m.endsAt = Date.now() + 5000;
+
+        if (ejected) {
+          const target = this.state.players.get(ejected);
+          if (target) {
+            target.isAlive = false;
+            target.revealedRole = this.playerRoles.get(ejected) ?? "trainer";
+          }
+        }
+        return;
       }
-      return;
     }
     // Results phase done — return to playing
     this.state.meeting = undefined;

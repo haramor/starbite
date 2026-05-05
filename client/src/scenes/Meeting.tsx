@@ -28,6 +28,18 @@ export function Meeting() {
     room?.send(ClientMsg.CastVote, { target });
   }
 
+  function readyToVote() {
+    room?.send(ClientMsg.ReadyToVote, {});
+  }
+
+  function submitVote() {
+    room?.send(ClientMsg.SubmitVote, { target: myVote || "skip" });
+  }
+
+  function quitDiscussion() {
+    room?.send(ClientMsg.QuitDiscussion, {});
+  }
+
   // Vote tally per candidate
   const tally = new Map<string, number>();
   for (const v of m.votes) tally.set(v.target, (tally.get(v.target) ?? 0) + 1);
@@ -61,11 +73,66 @@ export function Meeting() {
         )}
 
         {m.phase === "discussion" && (
-          <div className="bg-diner-panel rounded-2xl p-6 text-center">
-            <div className="text-sm opacity-80">
-              Discuss what you've seen. Use the chat. Voting opens when the timer
-              ends.
+          <div className="bg-diner-panel rounded-2xl p-6">
+            <div className="text-center mb-4">
+              <div className="text-sm opacity-80 mb-4">
+                Discuss what you've seen. Use the chat. Voting opens when the timer
+                ends or everyone is ready.
+              </div>
             </div>
+
+            {/* Ready status */}
+            <div className="mb-4">
+              <div className="text-xs opacity-60 mb-2 uppercase tracking-wider">
+                Ready to vote ({m.readyToVote.length} of {[...state.players.values()].filter(p => p.isAlive).length})
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[...state.players.values()]
+                  .filter(p => p.isAlive)
+                  .map(p => {
+                    const isReady = m.readyToVote.includes(p.sessionId);
+                    return (
+                      <div
+                        key={p.sessionId}
+                        className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs ${
+                          isReady
+                            ? "bg-diner-good/20 text-diner-good"
+                            : "bg-white/5 text-white/50"
+                        }`}
+                      >
+                        <span>{AVATAR_EMOJI[p.avatarId] ?? "🧑"}</span>
+                        <span>{p.name}</span>
+                        <span className="font-bold">
+                          {isReady ? "✓" : "…"}
+                        </span>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            {me?.isAlive && (
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={readyToVote}
+                  disabled={m.readyToVote.includes(mySessionId)}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${
+                    m.readyToVote.includes(mySessionId)
+                      ? "bg-diner-good/20 text-diner-good cursor-default"
+                      : "bg-diner-warm hover:brightness-110 text-black"
+                  }`}
+                >
+                  {m.readyToVote.includes(mySessionId) ? "✓ Ready" : "Ready to Vote"}
+                </button>
+                <button
+                  onClick={quitDiscussion}
+                  className="px-4 py-2 rounded-lg font-medium bg-diner-bad/20 hover:bg-diner-bad/30 text-diner-bad border border-diner-bad/50"
+                >
+                  Quit
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -75,10 +142,10 @@ export function Meeting() {
               <div className="bg-diner-panel rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-sm opacity-70">
-                    Vote to eject — or skip if you're not sure.
+                    Vote to eject — or skip if you're not sure. Click "Submit Vote" to confirm.
                   </div>
                   <div className="text-xs opacity-60">
-                    {votedSet.size} of {aliveCount} voted
+                    {m.submittedVotes.length} of {aliveCount} submitted
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -131,6 +198,25 @@ export function Meeting() {
                 >
                   Skip vote
                 </button>
+
+                {/* Submit Vote Button */}
+                <button
+                  onClick={submitVote}
+                  disabled={!myVote || m.submittedVotes.includes(mySessionId)}
+                  className={`w-full mt-4 rounded-lg p-3 font-bold text-lg transition ${
+                    m.submittedVotes.includes(mySessionId)
+                      ? "bg-diner-good/20 text-diner-good cursor-default"
+                      : !myVote
+                      ? "bg-white/10 text-white/30 cursor-not-allowed"
+                      : "bg-diner-bad hover:brightness-110 text-white"
+                  }`}
+                >
+                  {m.submittedVotes.includes(mySessionId)
+                    ? "✓ Vote Submitted"
+                    : !myVote
+                    ? "Select a vote first"
+                    : "Submit Vote"}
+                </button>
               </div>
             ) : (
               <div className="bg-diner-panel rounded-2xl p-6 text-center text-sm opacity-70">
@@ -138,29 +224,32 @@ export function Meeting() {
               </div>
             )}
 
-            {/* Voting-status panel: who has and hasn't voted yet */}
+            {/* Voting-status panel: who has and hasn't submitted yet */}
             <div className="bg-diner-panel/60 rounded-xl px-4 py-3">
               <div className="text-xs opacity-60 mb-2 uppercase tracking-wider">
-                Voting status
+                Submission status
               </div>
               <div className="flex flex-wrap gap-2">
                 {[...state.players.values()]
                   .filter((p) => p.isAlive)
                   .map((p) => {
-                    const voted = votedSet.has(p.sessionId);
+                    const hasVote = votedSet.has(p.sessionId);
+                    const submitted = m.submittedVotes.includes(p.sessionId);
                     return (
                       <div
                         key={p.sessionId}
                         className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs ${
-                          voted
+                          submitted
                             ? "bg-diner-good/20 text-diner-good"
+                            : hasVote
+                            ? "bg-diner-warm/20 text-diner-warm"
                             : "bg-white/5 text-white/50"
                         }`}
                       >
                         <span>{AVATAR_EMOJI[p.avatarId] ?? "🧑"}</span>
                         <span>{p.name}</span>
                         <span className="font-bold">
-                          {voted ? "✓" : "…"}
+                          {submitted ? "✓" : hasVote ? "?" : "…"}
                         </span>
                       </div>
                     );
