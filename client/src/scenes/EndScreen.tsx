@@ -62,7 +62,17 @@ export function EndScreen() {
 
   function playAgain() {
     room?.send(ClientMsg.ResetRound, {});
-    useGameStore.getState().setEndGame(null);
+    // Reset all client-side state to prevent contamination from previous game
+    const store = useGameStore.getState();
+    store.setEndGame(null);
+    store.setMyRole(null);
+    store.setCurrentExample(null);
+    store.setPoisonReady(true);
+    // Clear arrays by replacing with empty arrays
+    (store as any).customerEvents = [];
+    (store as any).accuracyAlerts = [];
+    (store as any).errors = [];
+    (store as any).chat = [];
   }
 
   // Sort roles for stable reveal order (saboteurs last for dramatic effect)

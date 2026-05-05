@@ -543,6 +543,14 @@ export class GameRoom extends Room<StarBiteState> {
       v.target = p.target;
       m.votes.push(v);
     }
+
+    // Check if everyone has voted - if so, end voting phase early
+    const aliveCount = [...this.state.players.values()].filter(p => p.isAlive).length;
+    if (m.votes.length >= aliveCount) {
+      // Everyone has voted - immediately move to results phase
+      m.phase = "results";
+      m.endsAt = Date.now() + 3000; // 3 second results phase
+    }
   }
 
   // ============================================================
@@ -768,6 +776,10 @@ export class GameRoom extends Room<StarBiteState> {
   }
 
   private maybeAlertAccuracyDrop(stationId: string, oldAcc: number, newAcc: number) {
+    // Don't send accuracy alerts during lobby phase or if the game just started
+    if (this.state.phase !== "playing") return;
+    if (Date.now() - this.roundStartedAt < 10000) return; // No alerts for first 10 seconds
+
     if (oldAcc - newAcc >= 15) {
       this.broadcast(ServerMsg.AccuracyAlert, {
         stationId,

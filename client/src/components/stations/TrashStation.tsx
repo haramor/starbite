@@ -9,6 +9,10 @@ import {
   useDraggable,
   useDroppable,
   DragEndEvent,
+  TouchSensor,
+  MouseSensor,
+  useSensor,
+  useSensors,
 } from "@dnd-kit/core";
 import { useState } from "react";
 
@@ -77,6 +81,20 @@ export function TrashStation({ isSaboteur }: Props) {
   const setPoisonReady = useGameStore((s) => s.setPoisonReady);
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
 
+  // Configure sensors for both mouse and touch (mobile) support
+  const mouseSensor = useSensor(MouseSensor, {
+    activationConstraint: {
+      distance: 8, // Require 8px movement before drag starts
+    },
+  });
+  const touchSensor = useSensor(TouchSensor, {
+    activationConstraint: {
+      delay: 200, // 200ms delay before touch drag starts
+      tolerance: 8, // Allow 8px movement during delay
+    },
+  });
+  const sensors = useSensors(mouseSensor, touchSensor);
+
   if (!example) {
     return (
       <div className="text-center py-8 opacity-60">Waiting for the next item…</div>
@@ -108,7 +126,7 @@ export function TrashStation({ isSaboteur }: Props) {
   }
 
   return (
-    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="space-y-5">
         {/* Draggable trash item */}
         <DraggableTrashItem example={example} />

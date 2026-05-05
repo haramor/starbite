@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useGameStore, useStarBiteState } from "../store/game.js";
 import { ClientMsg } from "starbite-shared";
+import { ChatPanel } from "../components/ChatPanel.js";
 
 const AVATAR_EMOJI = ["🧑", "👧", "👦", "🧒", "👩", "🧑‍🚀"];
 
@@ -246,6 +247,8 @@ function ResultsReveal() {
           {(ejected.revealedRole ?? "trainer").toUpperCase()}
         </div>
       </div>
+
+      <ChatPanel />
     </div>
   );
 }
