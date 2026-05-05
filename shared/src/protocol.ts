@@ -32,12 +32,6 @@ export const ClientMsg = {
   CallMeeting: "call_meeting",
   /** During a meeting's voting phase. */
   CastVote: "cast_vote",
-  /** Player indicates they're ready to move from discussion to voting phase. */
-  ReadyToVote: "ready_to_vote",
-  /** Player confirms their final vote choice during voting phase. */
-  SubmitVote: "submit_vote",
-  /** Player wants to quit/leave the current meeting. */
-  QuitDiscussion: "quit_discussion",
   /** Lobby chat / in-meeting chat. */
   Chat: "chat",
   /** Host clicks "Play again" on the EndScreen — wipe per-round state, return to lobby. */
@@ -84,19 +78,6 @@ export interface RequestNewExamplePayload {
 export interface CastVotePayload {
   // sessionId of player you're voting to eject, or "skip"
   target: string;
-}
-
-export interface ReadyToVotePayload {
-  // empty — just a signal that player is ready to move to voting
-}
-
-export interface SubmitVotePayload {
-  // sessionId of player you're voting to eject, or "skip"
-  target: string;
-}
-
-export interface QuitDiscussionPayload {
-  // empty — player wants to leave the meeting
 }
 
 export interface ChatPayload {
@@ -199,9 +180,6 @@ export interface ClientPayloadMap {
   [ClientMsg.RequestNewExample]: RequestNewExamplePayload;
   [ClientMsg.CallMeeting]: Record<string, never>;
   [ClientMsg.CastVote]: CastVotePayload;
-  [ClientMsg.ReadyToVote]: ReadyToVotePayload;
-  [ClientMsg.SubmitVote]: SubmitVotePayload;
-  [ClientMsg.QuitDiscussion]: QuitDiscussionPayload;
   [ClientMsg.Chat]: ChatPayload;
   [ClientMsg.ResetRound]: Record<string, never>;
 }

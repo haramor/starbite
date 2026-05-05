@@ -84,13 +84,13 @@ export function Meeting() {
             {/* Ready status */}
             <div className="mb-4">
               <div className="text-xs opacity-60 mb-2 uppercase tracking-wider">
-                Ready to vote ({m.readyToVote.length} of {[...state.players.values()].filter(p => p.isAlive).length})
+                Ready to vote ({(m.readyToVote?.length ?? 0)} of {[...state.players.values()].filter(p => p.isAlive).length})
               </div>
               <div className="flex flex-wrap gap-2">
                 {[...state.players.values()]
                   .filter(p => p.isAlive)
                   .map(p => {
-                    const isReady = m.readyToVote.includes(p.sessionId);
+                    const isReady = m.readyToVote?.includes(p.sessionId) ?? false;
                     return (
                       <div
                         key={p.sessionId}
@@ -116,14 +116,14 @@ export function Meeting() {
               <div className="flex gap-3 justify-center">
                 <button
                   onClick={readyToVote}
-                  disabled={m.readyToVote.includes(mySessionId)}
+                  disabled={m.readyToVote?.includes(mySessionId) ?? false}
                   className={`px-4 py-2 rounded-lg font-medium transition ${
-                    m.readyToVote.includes(mySessionId)
+                    (m.readyToVote?.includes(mySessionId) ?? false)
                       ? "bg-diner-good/20 text-diner-good cursor-default"
                       : "bg-diner-warm hover:brightness-110 text-black"
                   }`}
                 >
-                  {m.readyToVote.includes(mySessionId) ? "✓ Ready" : "Ready to Vote"}
+                  {(m.readyToVote?.includes(mySessionId) ?? false) ? "✓ Ready" : "Ready to Vote"}
                 </button>
                 <button
                   onClick={quitDiscussion}
@@ -145,7 +145,7 @@ export function Meeting() {
                     Vote to eject — or skip if you're not sure. Click "Submit Vote" to confirm.
                   </div>
                   <div className="text-xs opacity-60">
-                    {m.submittedVotes.length} of {aliveCount} submitted
+                    {(m.submittedVotes?.length ?? 0)} of {aliveCount} submitted
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -202,16 +202,16 @@ export function Meeting() {
                 {/* Submit Vote Button */}
                 <button
                   onClick={submitVote}
-                  disabled={!myVote || m.submittedVotes.includes(mySessionId)}
+                  disabled={!myVote || (m.submittedVotes?.includes(mySessionId) ?? false)}
                   className={`w-full mt-4 rounded-lg p-3 font-bold text-lg transition ${
-                    m.submittedVotes.includes(mySessionId)
+                    (m.submittedVotes?.includes(mySessionId) ?? false)
                       ? "bg-diner-good/20 text-diner-good cursor-default"
                       : !myVote
                       ? "bg-white/10 text-white/30 cursor-not-allowed"
                       : "bg-diner-bad hover:brightness-110 text-white"
                   }`}
                 >
-                  {m.submittedVotes.includes(mySessionId)
+                  {(m.submittedVotes?.includes(mySessionId) ?? false)
                     ? "✓ Vote Submitted"
                     : !myVote
                     ? "Select a vote first"
@@ -234,7 +234,7 @@ export function Meeting() {
                   .filter((p) => p.isAlive)
                   .map((p) => {
                     const hasVote = votedSet.has(p.sessionId);
-                    const submitted = m.submittedVotes.includes(p.sessionId);
+                    const submitted = m.submittedVotes?.includes(p.sessionId) ?? false;
                     return (
                       <div
                         key={p.sessionId}

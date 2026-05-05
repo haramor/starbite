@@ -106,8 +106,6 @@ export class Meeting extends Schema {
   @type("number") endsAt: number = 0;              // unix ms
   @type([Vote]) votes = new ArraySchema<Vote>();
   @type("string") result: string = "";             // sessionId of ejected player, or "skip", or ""
-  @type(["string"]) readyToVote = new ArraySchema<string>(); // sessionIds of players ready to move to voting
-  @type(["string"]) submittedVotes = new ArraySchema<string>(); // sessionIds of players who confirmed their vote
 }
 
 // ---------------------------------------------------------------
