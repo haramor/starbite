@@ -234,7 +234,7 @@ function SaboteurHUD({ me }: { me: Player }) {
   const remainingSec = Math.ceil(remainingMs / 1000);
 
   return (
-    <div className="absolute top-20 right-4 bg-diner-bad/90 text-white px-3 py-2 rounded-lg shadow-lg flex flex-col items-end gap-1 min-w-[150px] z-30">
+    <div className="absolute top-20 left-4 bg-diner-bad/90 text-white px-3 py-2 rounded-lg shadow-lg flex flex-col items-start gap-1 min-w-[150px] z-30">
       <div className="text-xs font-bold tracking-wider">🦹 SABOTEUR</div>
       <div className="flex items-center gap-2 text-[11px]">
         {ready ? (

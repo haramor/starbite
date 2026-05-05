@@ -131,6 +131,19 @@ export function GrillStation({ isSaboteur }: Props) {
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 text-center border-2 border-gray-600/50 shadow-2xl">
         <div className="mb-4">
           <div className="text-8xl mb-3 animate-pulse">{example.display.emoji ?? "🍔"}</div>
+
+          {/* Visual Patty Representation */}
+          <div className="mx-auto w-24 h-24 rounded-full border-4 border-gray-400 mb-3 relative overflow-hidden">
+            <div className="absolute inset-2 rounded-full bg-gradient-to-br from-amber-800 via-amber-700 to-amber-900"></div>
+            {/* Pink center for rare, brown throughout for done - based on description */}
+            <div className={`absolute inset-4 rounded-full ${
+              example.display.description?.toLowerCase().includes('pink') ||
+              example.display.name?.toLowerCase().includes('rare')
+                ? 'bg-gradient-to-br from-pink-400 to-red-500'
+                : 'bg-gradient-to-br from-amber-800 to-amber-900'
+            }`}></div>
+          </div>
+
           <div className="text-lg font-bold text-orange-200 mb-2">
             Fresh Patty on the Grill
           </div>

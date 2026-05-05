@@ -15,7 +15,7 @@ export const SATISFACTION_CONFUSED_LOSS = -6;
 export const SATISFACTION_ANGRY_LOSS = -14;
 
 export const MAX_MEETINGS_PER_ROUND = 2;
-export const MEETING_DISCUSSION_SEC = 45;
+export const MEETING_DISCUSSION_SEC = 120; // 2 minutes for proper discussion
 export const MEETING_VOTING_SEC = 30;
 
 export const FLAG_COOLDOWN_MS = 8_000;            // per-player cooldown on flagging at Review

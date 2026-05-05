@@ -61,18 +61,30 @@ export function EndScreen() {
   const finalSatisfaction = end?.finalSatisfaction ?? state.satisfaction;
 
   function playAgain() {
-    room?.send(ClientMsg.ResetRound, {});
-    // Reset all client-side state to prevent contamination from previous game
+    // Clear client state FIRST to prevent any alerts from showing
     const store = useGameStore.getState();
     store.setEndGame(null);
     store.setMyRole(null);
     store.setCurrentExample(null);
     store.setPoisonReady(true);
-    // Clear arrays by replacing with empty arrays
+    // Clear arrays by replacing with empty arrays - use proper Zustand updates
+    store.pushAccuracyAlert = () => {}; // Temporarily disable accuracy alerts
     (store as any).customerEvents = [];
     (store as any).accuracyAlerts = [];
     (store as any).errors = [];
     (store as any).chat = [];
+
+    // Small delay before sending reset to ensure client state is clean
+    setTimeout(() => {
+      room?.send(ClientMsg.ResetRound, {});
+      // Re-enable accuracy alerts after 5 seconds
+      setTimeout(() => {
+        store.pushAccuracyAlert = (a: any) =>
+          useGameStore.setState((s: any) => ({
+            accuracyAlerts: [...s.accuracyAlerts.slice(-4), a]
+          }));
+      }, 5000);
+    }, 100);
   }
 
   // Sort roles for stable reveal order (saboteurs last for dramatic effect)
