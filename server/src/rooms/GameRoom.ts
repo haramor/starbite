@@ -615,6 +615,7 @@ export class GameRoom extends Room<StarBiteState> {
   private tickMeeting() {
     const m = this.state.meeting;
     if (!m) return;
+    if (Date.now() < m.endsAt) return;
 
     if (m.phase === "discussion") {
       m.phase = "voting";
