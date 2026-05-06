@@ -628,29 +628,43 @@ export class GameRoom extends Room<StarBiteState> {
       for (const v of m.votes) {
         tally.set(v.target, (tally.get(v.target) ?? 0) + 1);
       }
-      let topTarget = "skip";
-      let topCount = 0;
-      let tie = false;
-      for (const [t, c] of tally) {
-        if (c > topCount) {
-          topTarget = t;
-          topCount = c;
-          tie = false;
-        } else if (c === topCount) {
-          tie = true;
+
+      // Find the highest vote count
+      let maxVotes = 0;
+      for (const count of tally.values()) {
+        if (count > maxVotes) maxVotes = count;
+      }
+
+      // Find all candidates with the highest vote count
+      const winners = [];
+      for (const [target, count] of tally) {
+        if (count === maxVotes) {
+          winners.push(target);
         }
       }
+
+      // Determine result: tie if multiple winners, skip if no votes or skip wins, else eject the winner
+      const tie = winners.length > 1;
+      const topTarget = winners.length === 1 ? winners[0] : "skip";
       const ejected = tie || topTarget === "skip" ? "" : topTarget;
       m.result = tie || topTarget === "skip" ? "skip" : topTarget;
       m.phase = "results";
       m.endsAt = Date.now() + 5000;
+
+      // Debug logging
+      console.log(`[room ${this.state.code}] Vote results: ${JSON.stringify(Object.fromEntries(tally))}, maxVotes=${maxVotes}, winners=[${winners.join(",")}], tie=${tie}, ejected="${ejected}"`);
 
       if (ejected) {
         const target = this.state.players.get(ejected);
         if (target) {
           target.isAlive = false;
           target.revealedRole = this.playerRoles.get(ejected) ?? "trainer";
+          console.log(`[room ${this.state.code}] Ejected player ${target.name} (${ejected}), role: ${target.revealedRole}`);
+        } else {
+          console.log(`[room ${this.state.code}] ERROR: Could not find player to eject: ${ejected}`);
         }
+      } else {
+        console.log(`[room ${this.state.code}] No ejection: ${tie ? "tie vote" : "skip vote won"}`);
       }
       return;
     }
