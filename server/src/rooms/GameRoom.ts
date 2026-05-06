@@ -547,12 +547,57 @@ export class GameRoom extends Room<StarBiteState> {
     // Check if everyone has voted - if so, end voting phase early
     const aliveCount = [...this.state.players.values()].filter(p => p.isAlive).length;
     if (m.votes.length >= aliveCount) {
-      // Everyone has voted - immediately move to results phase
-      m.phase = "results";
-      m.endsAt = Date.now() + 3000; // 3 second results phase
+      // Everyone has voted - immediately process results
+      this.processMeetingResults(m);
     }
   }
 
+  private processMeetingResults(m: Meeting) {
+    // Tally votes
+    const tally = new Map<string, number>();
+    for (const v of m.votes) {
+      tally.set(v.target, (tally.get(v.target) ?? 0) + 1);
+    }
+
+    // Find the highest vote count
+    let maxVotes = 0;
+    for (const count of tally.values()) {
+      if (count > maxVotes) maxVotes = count;
+    }
+
+    // Find all candidates with the highest vote count
+    const winners = [];
+    for (const [target, count] of tally) {
+      if (count === maxVotes) {
+        winners.push(target);
+      }
+    }
+
+    // Determine result: tie if multiple winners, skip if no votes or skip wins, else eject the winner
+    const tie = winners.length > 1;
+    const topTarget = winners.length === 1 ? winners[0] : "skip";
+    const ejected = tie || topTarget === "skip" ? "" : topTarget;
+
+    m.result = tie || topTarget === "skip" ? "skip" : topTarget;
+    m.phase = "results";
+    m.endsAt = Date.now() + 5000;
+
+    // Debug logging
+    console.log(`[room ${this.state.code}] Vote results: ${JSON.stringify(Object.fromEntries(tally))}, maxVotes=${maxVotes}, winners=[${winners.join(",")}], tie=${tie}, ejected="${ejected}"`);
+
+    if (ejected) {
+      const target = this.state.players.get(ejected);
+      if (target) {
+        target.isAlive = false;
+        target.revealedRole = this.playerRoles.get(ejected) ?? "trainer";
+        console.log(`[room ${this.state.code}] Ejected player ${target.name} (${ejected}), role: ${target.revealedRole}`);
+      } else {
+        console.log(`[room ${this.state.code}] ERROR: Could not find player to eject: ${ejected}`);
+      }
+    } else {
+      console.log(`[room ${this.state.code}] No ejection: ${tie ? "tie vote" : "skip vote won"}`);
+    }
+  }
 
   // ============================================================
   // Tick loop
@@ -623,49 +668,8 @@ export class GameRoom extends Room<StarBiteState> {
       return;
     }
     if (m.phase === "voting") {
-      // Tally votes
-      const tally = new Map<string, number>();
-      for (const v of m.votes) {
-        tally.set(v.target, (tally.get(v.target) ?? 0) + 1);
-      }
-
-      // Find the highest vote count
-      let maxVotes = 0;
-      for (const count of tally.values()) {
-        if (count > maxVotes) maxVotes = count;
-      }
-
-      // Find all candidates with the highest vote count
-      const winners = [];
-      for (const [target, count] of tally) {
-        if (count === maxVotes) {
-          winners.push(target);
-        }
-      }
-
-      // Determine result: tie if multiple winners, skip if no votes or skip wins, else eject the winner
-      const tie = winners.length > 1;
-      const topTarget = winners.length === 1 ? winners[0] : "skip";
-      const ejected = tie || topTarget === "skip" ? "" : topTarget;
-      m.result = tie || topTarget === "skip" ? "skip" : topTarget;
-      m.phase = "results";
-      m.endsAt = Date.now() + 5000;
-
-      // Debug logging
-      console.log(`[room ${this.state.code}] Vote results: ${JSON.stringify(Object.fromEntries(tally))}, maxVotes=${maxVotes}, winners=[${winners.join(",")}], tie=${tie}, ejected="${ejected}"`);
-
-      if (ejected) {
-        const target = this.state.players.get(ejected);
-        if (target) {
-          target.isAlive = false;
-          target.revealedRole = this.playerRoles.get(ejected) ?? "trainer";
-          console.log(`[room ${this.state.code}] Ejected player ${target.name} (${ejected}), role: ${target.revealedRole}`);
-        } else {
-          console.log(`[room ${this.state.code}] ERROR: Could not find player to eject: ${ejected}`);
-        }
-      } else {
-        console.log(`[room ${this.state.code}] No ejection: ${tie ? "tie vote" : "skip vote won"}`);
-      }
+      // Voting time expired - process results
+      this.processMeetingResults(m);
       return;
     }
     // Results phase done — return to playing
