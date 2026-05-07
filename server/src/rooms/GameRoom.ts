@@ -557,13 +557,11 @@ export class GameRoom extends Room<StarBiteState> {
       return;
     }
 
-    // Target must be "skip" or a sessionId of a current alive player.
-    if (p.target !== "skip") {
-      const targetPlayer = this.state.players.get(p.target);
-      if (!targetPlayer || !targetPlayer.isAlive) {
-        this.sendError(client, "bad_target", "Vote target is not in the round.");
-        return;
-      }
+    // Target must be a sessionId of a current alive player.
+    const targetPlayer = this.state.players.get(p.target);
+    if (!targetPlayer || !targetPlayer.isAlive) {
+      this.sendError(client, "bad_target", "Vote target is not in the round.");
+      return;
     }
 
     const existing = m.votes.find((v) => v.voterSessionId === client.sessionId);
@@ -599,10 +597,13 @@ export class GameRoom extends Room<StarBiteState> {
   }
 
   private processMeetingResults(m: Meeting) {
-    // Tally votes
+    // Tally votes (only actual votes for players, no "skip" option)
     const tally = new Map<string, number>();
     for (const v of m.votes) {
-      tally.set(v.target, (tally.get(v.target) ?? 0) + 1);
+      // Skip any "skip" votes from old system
+      if (v.target !== "skip") {
+        tally.set(v.target, (tally.get(v.target) ?? 0) + 1);
+      }
     }
 
     // Find the highest vote count
@@ -619,17 +620,17 @@ export class GameRoom extends Room<StarBiteState> {
       }
     }
 
-    // Determine result: tie if multiple winners, skip if no votes or skip wins, else eject the winner
+    // Determine result: eject if single winner with votes, otherwise no ejection
     const tie = winners.length > 1;
-    const topTarget = winners.length === 1 ? winners[0] : "skip";
-    const ejected = tie || topTarget === "skip" ? "" : topTarget;
+    const noVotes = maxVotes === 0;
+    const ejected = !tie && !noVotes ? winners[0] : "";
 
-    m.result = tie || topTarget === "skip" ? "skip" : topTarget;
+    m.result = ejected || "skip";
     m.phase = "results";
     m.endsAt = Date.now() + 5000;
 
     // Debug logging
-    console.log(`[room ${this.state.code}] Vote results: ${JSON.stringify(Object.fromEntries(tally))}, maxVotes=${maxVotes}, winners=[${winners.join(",")}], tie=${tie}, ejected="${ejected}"`);
+    console.log(`[room ${this.state.code}] Vote results: ${JSON.stringify(Object.fromEntries(tally))}, maxVotes=${maxVotes}, winners=[${winners.join(",")}], tie=${tie}, noVotes=${noVotes}, ejected="${ejected}"`);
 
     if (ejected) {
       const target = this.state.players.get(ejected);
@@ -641,7 +642,7 @@ export class GameRoom extends Room<StarBiteState> {
         console.log(`[room ${this.state.code}] ERROR: Could not find player to eject: ${ejected}`);
       }
     } else {
-      console.log(`[room ${this.state.code}] No ejection: ${tie ? "tie vote" : "skip vote won"}`);
+      console.log(`[room ${this.state.code}] No ejection: ${tie ? "tie vote" : noVotes ? "no votes cast" : "unknown"}`);
     }
   }
 

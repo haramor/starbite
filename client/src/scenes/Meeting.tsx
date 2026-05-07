@@ -88,7 +88,7 @@ export function Meeting() {
               <div className="bg-diner-panel rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-sm opacity-70">
-                    Vote to eject — or skip if you're not sure.
+                    Vote to eject — or don't vote if you're not sure.
                   </div>
                   <div className="text-xs opacity-60">
                     {votedSet.size} of {aliveCount} voted
@@ -134,16 +134,6 @@ export function Meeting() {
                       );
                     })}
                 </div>
-                <button
-                  onClick={() => vote("skip")}
-                  className={`w-full mt-3 rounded-lg p-3 ${
-                    myVote === "skip"
-                      ? "bg-diner-warm text-black"
-                      : "bg-diner-bg hover:brightness-125"
-                  }`}
-                >
-                  Skip vote
-                </button>
               </div>
             ) : (
               <div className="bg-diner-panel rounded-2xl p-6 text-center text-sm opacity-70">
