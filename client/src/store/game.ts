@@ -34,6 +34,8 @@ export interface GameStore {
   stateTick: number;
   myRole: Role | null;
   mySessionId: string;
+  // For saboteurs: list of other saboteurs on their team
+  saboteurTeammates: Array<{ sessionId: string; name: string; avatarId: number }> | null;
   // The example currently shown to the player at their station, if any.
   currentExample: CurrentExamplePayload | null;
   poisonReady: boolean;
@@ -49,6 +51,7 @@ export interface GameStore {
   bumpStateTick: () => void;
   setMyRole: (r: Role | null) => void;
   setMySessionId: (id: string) => void;
+  setSaboteurTeammates: (teammates: Array<{ sessionId: string; name: string; avatarId: number }> | null) => void;
   setCurrentExample: (e: CurrentExamplePayload | null) => void;
   setPoisonReady: (b: boolean) => void;
   pushCustomerEvent: (e: CustomerResultPayload) => void;
@@ -56,6 +59,7 @@ export interface GameStore {
   setEndGame: (e: GameEndedPayload | null) => void;
   pushError: (code: string, message: string) => void;
   pushChat: (msg: ChatMsg) => void;
+  clearChat: () => void;
 }
 
 export const useGameStore = create<GameStore>((set) => ({
@@ -64,6 +68,7 @@ export const useGameStore = create<GameStore>((set) => ({
   stateTick: 0,
   myRole: null,
   mySessionId: "",
+  saboteurTeammates: null,
   currentExample: null,
   poisonReady: true,
   customerEvents: [],
@@ -77,6 +82,7 @@ export const useGameStore = create<GameStore>((set) => ({
   bumpStateTick: () => set((s) => ({ stateTick: s.stateTick + 1 })),
   setMyRole: (myRole) => set({ myRole }),
   setMySessionId: (mySessionId) => set({ mySessionId }),
+  setSaboteurTeammates: (saboteurTeammates) => set({ saboteurTeammates }),
   setCurrentExample: (currentExample) => set({ currentExample }),
   setPoisonReady: (poisonReady) => set({ poisonReady }),
   pushCustomerEvent: (e) =>
@@ -89,6 +95,7 @@ export const useGameStore = create<GameStore>((set) => ({
       errors: [...s.errors.slice(-9), { code, message, at: Date.now() }],
     })),
   pushChat: (msg) => set((s) => ({ chat: [...s.chat.slice(-29), msg] })),
+  clearChat: () => set({ chat: [] }),
 }));
 
 /**

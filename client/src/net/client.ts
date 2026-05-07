@@ -57,6 +57,7 @@ function wireRoom(room: Room<StarBiteState>) {
 
   room.onMessage(ServerMsg.RoleAssigned, (msg: RoleAssignedPayload) => {
     useGameStore.getState().setMyRole(msg.role);
+    useGameStore.getState().setSaboteurTeammates(msg.teammates || null);
   });
 
   room.onMessage(ServerMsg.CurrentExample, (msg: CurrentExamplePayload) => {
@@ -92,6 +93,7 @@ function wireRoom(room: Room<StarBiteState>) {
   room.onLeave(() => {
     useGameStore.getState().setRoom(null);
     useGameStore.getState().setState(null);
+    useGameStore.getState().clearChat();
   });
 
   return room;

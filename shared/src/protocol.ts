@@ -32,6 +32,8 @@ export const ClientMsg = {
   CallMeeting: "call_meeting",
   /** During a meeting's voting phase. */
   CastVote: "cast_vote",
+  /** Skip discussion phase and immediately move to voting. */
+  VoteNow: "vote_now",
   /** Lobby chat / in-meeting chat. */
   Chat: "chat",
   /** Host clicks "Play again" on the EndScreen — wipe per-round state, return to lobby. */
@@ -80,6 +82,10 @@ export interface CastVotePayload {
   target: string;
 }
 
+export interface VoteNowPayload {
+  // empty — just a signal to skip discussion
+}
+
 export interface ChatPayload {
   text: string;
 }
@@ -112,6 +118,8 @@ export type Phase = "lobby" | "playing" | "meeting" | "ended";
 
 export interface RoleAssignedPayload {
   role: Role;
+  // For saboteurs only: list of other saboteurs on their team
+  teammates?: Array<{ sessionId: string; name: string; avatarId: number }>;
 }
 
 // What a player sees when they're at a station and need to label an example.
@@ -180,6 +188,7 @@ export interface ClientPayloadMap {
   [ClientMsg.RequestNewExample]: RequestNewExamplePayload;
   [ClientMsg.CallMeeting]: Record<string, never>;
   [ClientMsg.CastVote]: CastVotePayload;
+  [ClientMsg.VoteNow]: VoteNowPayload;
   [ClientMsg.Chat]: ChatPayload;
   [ClientMsg.ResetRound]: Record<string, never>;
 }

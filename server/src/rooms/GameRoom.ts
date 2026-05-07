@@ -57,6 +57,7 @@ import {
   type FlagSubmissionPayload,
   type RequestNewExamplePayload,
   type CastVotePayload,
+  type VoteNowPayload,
   type CurrentExamplePayload,
   type RoleAssignedPayload,
   type CustomerResultPayload,
@@ -142,6 +143,7 @@ export class GameRoom extends Room<StarBiteState> {
     );
     this.onMessage(ClientMsg.CallMeeting, (c) => this.handleCallMeeting(c));
     this.onMessage(ClientMsg.CastVote, (c, p: CastVotePayload) => this.handleCastVote(c, p));
+    this.onMessage(ClientMsg.VoteNow, (c, p: VoteNowPayload) => this.handleVoteNow(c, p));
     this.onMessage(ClientMsg.ResetRound, (c) => this.handleResetRound(c));
     this.onMessage(ClientMsg.Chat, (c, p: { text: string }) => {
       // For MVP: simple broadcast. Sky's track can render this.
@@ -245,9 +247,26 @@ export class GameRoom extends Room<StarBiteState> {
     // Assign roles privately
     const sids = [...this.state.players.keys()];
     this.playerRoles = assignRoles(sids);
+
+    // Collect saboteur team information for sharing among saboteurs
+    const saboteurs = Array.from(this.playerRoles.entries())
+      .filter(([_, role]) => role === "saboteur")
+      .map(([sessionId, _]) => {
+        const player = this.state.players.get(sessionId);
+        return player ? { sessionId, name: player.name, avatarId: player.avatarId } : null;
+      })
+      .filter((p): p is { sessionId: string; name: string; avatarId: number } => p !== null);
+
     for (const [sid, role] of this.playerRoles) {
       const c = this.clients.find((cl) => cl.sessionId === sid);
-      if (c) c.send(ServerMsg.RoleAssigned, { role } satisfies RoleAssignedPayload);
+      if (c) {
+        const payload: RoleAssignedPayload = { role };
+        // Include saboteur teammates if this player is a saboteur
+        if (role === "saboteur") {
+          payload.teammates = saboteurs.filter(s => s.sessionId !== sid);
+        }
+        c.send(ServerMsg.RoleAssigned, payload);
+      }
     }
 
     this.state.phase = "playing";
@@ -430,6 +449,19 @@ export class GameRoom extends Room<StarBiteState> {
     this.recordAccuracySample(station.id, station.accuracy);
     this.maybeAlertAccuracyDrop(station.id, oldStationAcc, station.accuracy);
 
+    // Immediate satisfaction feedback for label submissions
+    // Provides responsive feedback while keeping main satisfaction tied to customer outcomes
+    if (!isPoison) {
+      if (isCorrect) {
+        // Small reward for correct submissions
+        this.state.satisfaction = Math.max(0, Math.min(100, this.state.satisfaction + 1));
+      } else {
+        // Small penalty for incorrect submissions
+        this.state.satisfaction = Math.max(0, Math.min(100, this.state.satisfaction - 0.5));
+      }
+    }
+    // Poison submissions don't give immediate satisfaction feedback
+
     // Visual tell: longer linger for poisoners
     player.isLingering = true;
     const lingerMs = isPoison ? POISON_LINGER_MS : NORMAL_SUBMIT_LINGER_MS;
@@ -550,6 +582,20 @@ export class GameRoom extends Room<StarBiteState> {
       // Everyone has voted - immediately process results
       this.processMeetingResults(m);
     }
+  }
+
+  private handleVoteNow(client: Client, p: VoteNowPayload) {
+    const m = this.state.meeting;
+    if (!m || m.phase !== "discussion") return;
+
+    // Only allow alive players to trigger vote now
+    const player = this.state.players.get(client.sessionId);
+    if (!player?.isAlive) return;
+
+    // Immediately transition to voting phase
+    m.phase = "voting";
+    m.endsAt = Date.now() + this.cfgMeetingVoteSec * 1000;
+    console.log(`[room ${this.state.code}] Player ${player.name} skipped discussion, moving to voting`);
   }
 
   private processMeetingResults(m: Meeting) {

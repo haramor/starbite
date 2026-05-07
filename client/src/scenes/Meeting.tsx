@@ -28,6 +28,10 @@ export function Meeting() {
     room?.send(ClientMsg.CastVote, { target });
   }
 
+  function voteNow() {
+    room?.send(ClientMsg.VoteNow, {});
+  }
+
   // Vote tally per candidate
   const tally = new Map<string, number>();
   for (const v of m.votes) tally.set(v.target, (tally.get(v.target) ?? 0) + 1);
@@ -62,10 +66,19 @@ export function Meeting() {
 
         {m.phase === "discussion" && (
           <div className="bg-diner-panel rounded-2xl p-6 text-center">
-            <div className="text-sm opacity-80">
+            <div className="text-sm opacity-80 mb-4">
               Discuss what you've seen. Use the chat. Voting opens when the timer
               ends.
             </div>
+
+            {me?.isAlive && (
+              <button
+                onClick={voteNow}
+                className="bg-diner-warm hover:brightness-110 text-black font-bold py-2 px-4 rounded-lg transition"
+              >
+                🗳️ Vote Now
+              </button>
+            )}
           </div>
         )}
 

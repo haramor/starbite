@@ -15,6 +15,8 @@ import { AlertBanner } from "../components/AlertBanner.js";
 import { ChatPanel } from "../components/ChatPanel.js";
 import { HowToPlayModal } from "../components/HowToPlayModal.js";
 
+const AVATAR_EMOJI = ["🧑", "👧", "👦", "🧒", "👩", "🧑‍🚀"];
+
 // How many tiles ahead of the player we project the move target while a key
 // is held. Reduced from 4 to 1.5 for finer control and less overshoot.
 const MOVE_LOOKAHEAD_TILES = 1.5;
@@ -224,6 +226,8 @@ export function Game() {
 
 function SaboteurHUD({ me }: { me: Player }) {
   const [now, setNow] = useState(Date.now());
+  const saboteurTeammates = useGameStore((s) => s.saboteurTeammates);
+
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 200);
     return () => clearInterval(id);
@@ -246,6 +250,21 @@ function SaboteurHUD({ me }: { me: Player }) {
           </>
         )}
       </div>
+
+      {/* Saboteur teammates */}
+      {saboteurTeammates && saboteurTeammates.length > 0 && (
+        <div className="border-t border-white/20 pt-1 mt-1">
+          <div className="text-[10px] opacity-70 mb-1">Your team:</div>
+          <div className="space-y-0.5">
+            {saboteurTeammates.map((teammate) => (
+              <div key={teammate.sessionId} className="flex items-center gap-1.5 text-[11px]">
+                <span className="text-sm">{AVATAR_EMOJI[teammate.avatarId] ?? "🧑"}</span>
+                <span className="truncate max-w-[100px]">{teammate.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
