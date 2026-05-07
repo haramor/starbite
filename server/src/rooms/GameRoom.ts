@@ -801,6 +801,10 @@ export class GameRoom extends Room<StarBiteState> {
     if (oldAcc === 100) return; // Never alert when starting from 100% (fresh game)
 
     if (oldAcc - newAcc >= 15) {
+      // Debug: log accuracy alert details
+      const currentDisplayed = this.state.stations.get(stationId)?.accuracy ?? 0;
+      console.log(`[room ${this.state.code}] Accuracy alert for ${stationId}: oldAcc=${oldAcc}%, newAcc=${newAcc}%, currentDisplayed=${currentDisplayed}%, drop=${oldAcc - newAcc}%`);
+
       this.broadcast(ServerMsg.AccuracyAlert, {
         stationId,
         oldAccuracy: oldAcc,
