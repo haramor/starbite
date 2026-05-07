@@ -124,8 +124,6 @@ function CookingButton({
 export function GrillStation({ isSaboteur }: Props) {
   const room = useGameStore((s) => s.room);
   const example = useGameStore((s) => s.currentExample);
-  const poisonReady = useGameStore((s) => s.poisonReady);
-  const setPoisonReady = useGameStore((s) => s.setPoisonReady);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!example) {
@@ -138,13 +136,12 @@ export function GrillStation({ isSaboteur }: Props) {
     );
   }
 
-  function submit(label: string, poison: boolean) {
+  function submit(label: string) {
     if (!example || isSubmitting) return;
 
     setIsSubmitting(true);
-    if (poison) setPoisonReady(false);
 
-    room?.send(poison ? ClientMsg.PoisonLabel : ClientMsg.SubmitLabel, {
+    room?.send(ClientMsg.SubmitLabel, {
       stationId: "grill",
       exampleId: example.exampleId,
       label,
@@ -200,49 +197,12 @@ export function GrillStation({ isSaboteur }: Props) {
           <CookingButton
             key={label}
             label={label}
-            onSubmit={() => submit(label, false)}
+            onSubmit={() => submit(label)}
             isSubmitting={isSubmitting}
           />
         ))}
       </div>
 
-      {/* Saboteur Section */}
-      {isSaboteur && (
-        <div className="border-t-2 border-red-500/20 pt-6 mt-6 bg-red-900/10 rounded-lg p-4">
-          <div className="text-center mb-4">
-            <div className="text-red-400 font-bold text-sm mb-1">
-              🦹 SABOTEUR ABILITY
-            </div>
-            <div className="text-xs text-red-300 opacity-80">
-              Mislead the Grill Bot with wrong temperature readings!
-              {!poisonReady && " (Equipment cooling down...)"}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            {example.labelOptions.map((label) => {
-              const config = COOKING_CONFIG[label as keyof typeof COOKING_CONFIG];
-              return (
-                <button
-                  key={label}
-                  disabled={!poisonReady || isSubmitting}
-                  onClick={() => submit(label, true)}
-                  className={`
-                    bg-red-900/50 hover:bg-red-800/60 disabled:opacity-30
-                    disabled:cursor-not-allowed border border-red-500/50
-                    text-red-200 text-sm py-3 rounded-xl transition-all
-                    hover:scale-105 active:scale-95 font-medium
-                    flex items-center justify-center gap-2
-                  `}
-                >
-                  <span className="text-lg">{config?.emoji}</span>
-                  <span>Fake: {label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Visual feedback overlay */}
       {isSubmitting && (

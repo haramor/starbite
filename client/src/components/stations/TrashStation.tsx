@@ -77,8 +77,6 @@ function DroppableBin({ label, emoji, color }: { label: string; emoji: string; c
 export function TrashStation({ isSaboteur }: Props) {
   const room = useGameStore((s) => s.room);
   const example = useGameStore((s) => s.currentExample);
-  const poisonReady = useGameStore((s) => s.poisonReady);
-  const setPoisonReady = useGameStore((s) => s.setPoisonReady);
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
 
   // Configure sensors for both mouse and touch (mobile) support
@@ -101,10 +99,9 @@ export function TrashStation({ isSaboteur }: Props) {
     );
   }
 
-  function submit(label: string, poison: boolean) {
+  function submit(label: string) {
     if (!example) return;
-    if (poison) setPoisonReady(false);
-    room?.send(poison ? ClientMsg.PoisonLabel : ClientMsg.SubmitLabel, {
+    room?.send(ClientMsg.SubmitLabel, {
       stationId: "trash",
       exampleId: example.exampleId,
       label,
@@ -121,7 +118,7 @@ export function TrashStation({ isSaboteur }: Props) {
 
     if (over?.id && typeof over.id === "string" && over.id.startsWith("bin-")) {
       const label = over.id.replace("bin-", "");
-      submit(label, false); // Normal submission on drop
+      submit(label);
     }
   }
 
@@ -147,30 +144,6 @@ export function TrashStation({ isSaboteur }: Props) {
           ))}
         </div>
 
-        {/* Saboteur poison buttons */}
-        {isSaboteur && (
-          <div className="border-t border-white/10 pt-4 mt-4">
-            <div className="text-xs text-diner-bad font-bold mb-2">
-              🦹 SABOTEUR ABILITY
-            </div>
-            <div className="text-xs opacity-70 mb-3">
-              Click to send to the WRONG bin and poison the training data.
-              {!poisonReady && " (cooldown)"}
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {example.labelOptions.map((label) => (
-                <button
-                  key={label}
-                  disabled={!poisonReady}
-                  onClick={() => submit(label, true)}
-                  className="bg-diner-bad/30 hover:bg-diner-bad/50 disabled:opacity-30 disabled:cursor-not-allowed text-xs py-2 rounded-lg capitalize border border-diner-bad/50"
-                >
-                  Poison: {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Drag overlay for visual feedback */}
         <DragOverlay>
